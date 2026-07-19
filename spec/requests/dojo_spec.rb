@@ -24,6 +24,24 @@ RSpec.describe "Dojo", type: :request do
       expect(response.body).to include('data-svelte-component="ChallengeModal"')
     end
 
+    it "emits the VAPID meta tag and the challenge-alerts opt-in panel for a verified fighter" do
+      user = create(:user)
+      sign_in_as(user)
+
+      get root_path
+
+      expect(response.body).to include('name="vapid-public-key"')
+      expect(response.body).to include(Push.public_key)
+      expect(response.body).to include("data-push-alerts")
+      expect(response.body).to include("Challenge alerts")
+    end
+
+    it "does not leak the VAPID meta tag to signed-out visitors" do
+      get root_path
+
+      expect(response.body).not_to include('name="vapid-public-key"')
+    end
+
     it "seeds the inbox island with the fighter's incoming and outgoing challenges" do
       user = create(:user)
       sign_in_as(user)

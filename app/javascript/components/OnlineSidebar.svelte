@@ -119,9 +119,9 @@
     color: var(--kfm-ink);
     font-size: 0.85rem;
     font-weight: bold;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    min-width: 0;
+    flex: 1 1 auto;
+    overflow-wrap: anywhere;
   }
   .online__name:hover { color: var(--kfm-belt-red); }
 

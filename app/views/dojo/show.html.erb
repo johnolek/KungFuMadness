@@ -13,6 +13,16 @@
 
   <div data-svelte-component="Inbox"
        data-props="<%= { incoming: @incoming, outgoing: @outgoing }.to_json %>"></div>
+
+  <% if Push.configured? %>
+    <%# Progressive opt-in: hidden until push.js confirms the browser supports it. %>
+    <div class="panel-kfm push-alerts" data-push-alerts hidden>
+      <div class="panel-kfm-title">Challenge alerts</div>
+      <p class="stat-line" data-push-status>Get a notification the moment someone challenges you.</p>
+      <button type="button" class="btn-kfm btn-kfm--sm" data-push-enable hidden>Enable notifications</button>
+      <button type="button" class="btn-kfm btn-kfm--sm" data-push-disable hidden>Disable</button>
+    </div>
+  <% end %>
 <% else %>
   <div class="panel-kfm">
     <div class="panel-kfm-title">The Dojo</div>

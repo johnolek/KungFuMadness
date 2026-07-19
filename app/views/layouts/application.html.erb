@@ -9,6 +9,11 @@
     <%= csrf_meta_tags %>
     <%= csp_meta_tag %>
 
+    <link rel="manifest" href="<%= pwa_manifest_path %>">
+    <% if living_world? && Push.configured? %>
+      <meta name="vapid-public-key" content="<%= Push.public_key %>">
+    <% end %>
+
     <%= yield :head %>
 
     <link rel="icon" href="/icon.png" type="image/png">

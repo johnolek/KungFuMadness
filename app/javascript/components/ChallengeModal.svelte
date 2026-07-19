@@ -194,6 +194,7 @@
           {#if data.scouting.length === 0}
             <p class="scout__empty">No resolved fights on record. You're stepping into the unknown.</p>
           {:else}
+            <div class="table-scroll">
             <table class="stat-table scout__table">
               <thead><tr><th>Date</th><th>Vs</th><th>Belt</th><th>Result</th><th></th></tr></thead>
               <tbody>
@@ -208,6 +209,7 @@
                 {/each}
               </tbody>
             </table>
+            </div>
           {/if}
         </details>
 

@@ -29,6 +29,32 @@ depth comes from scouting opponents' public match history.
 - `bundle exec rspec` — test suite.
 - `bin/rails db:prepare` — create DBs + run migrations (incl. solid tables).
 
+## Environment / configuration
+
+Read from ENV (all optional in dev, which has sane fallbacks):
+
+- `WEBAUTHN_RP_NAME` / `WEBAUTHN_RP_ID` / `WEBAUTHN_ORIGIN` — passkey relying-party
+  config (dev falls back to `localhost` + ports 3000–3010).
+- `MAIL_FROM` — sender address; also the Web Push VAPID subject (`mailto:`).
+- `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` — Web Push keys. In dev, if unset, a
+  keypair is generated on first boot and persisted to `tmp/vapid.json`
+  (git-ignored) so push works with zero setup. Generate a production pair with
+  `bin/rails push:generate_vapid`. Config lives in `config/initializers/web_push.rb`
+  (the `Push` module: `Push.configured?`, `Push.public_key`, `Push.vapid_details`).
+
+## PWA push notifications
+
+Opt-in system push when a challenge lands. Flow: the dojo renders a "Challenge
+alerts" panel + a `vapid-public-key` meta tag (verified fighters only, gated on
+`Push.configured?`); `app/javascript/push.js` registers the service worker
+(`/service-worker`, served by `rails/pwa`), subscribes via the Push API, and
+POST/DELETEs `PushSubscription`s (unique by endpoint, one row per browser). On a
+new challenge `Fight#broadcast_challenge_received` enqueues
+`PushChallengeNotificationJob` for human opponents (never bots); the job fans out
+to each subscription via `PushSubscription#deliver`, which prunes gone (404/410)
+subscriptions. The service worker's `push` / `notificationclick` handlers show
+the notification and focus/open the dojo. iOS requires add-to-home-screen.
+
 ## Islands convention
 
 Rails owns routes and rendering (Turbo). Interactivity is Svelte 5 islands:

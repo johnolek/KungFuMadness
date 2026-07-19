@@ -239,6 +239,7 @@ class Fight < ApplicationRecord
     return unless pending?
 
     FighterChannel.broadcast_to(opponent, event: "challenge_received", fight: challenge_card_payload)
+    PushChallengeNotificationJob.perform_later(id) unless opponent.bot?
   end
 
   # Status flips drive the rest of the living world. Only fire on an actual status

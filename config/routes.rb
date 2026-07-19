@@ -40,6 +40,16 @@ Rails.application.routes.draw do
   # Public playback for resolved fights.
   resources :fights, only: %i[show]
 
+  # Web Push opt-in: register/refresh (POST) or drop (DELETE) the browser's
+  # subscription for the current user, keyed by endpoint in the JSON body.
+  post "push_subscriptions", to: "push_subscriptions#create"
+  delete "push_subscriptions", to: "push_subscriptions#destroy"
+
+  # PWA: dynamic manifest + service worker (the SW must be same-origin at root
+  # scope to control the whole app). Rendered from app/views/pwa/*.
+  get "manifest", to: "rails/pwa#manifest", as: :pwa_manifest
+  get "service-worker", to: "rails/pwa#service_worker", as: :pwa_service_worker
+
   # Reveal health status on /up that returns 200 if the app boots with no exceptions, otherwise 500.
   get "up" => "rails/health#show", as: :rails_health_check
 

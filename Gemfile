@@ -22,6 +22,9 @@ gem "jbuilder"
 # Passkey (WebAuthn) authentication [https://github.com/cedarcode/webauthn-ruby]
 gem "webauthn", "~> 3.4"
 
+# Web Push (VAPID) delivery for PWA challenge notifications [https://github.com/pushpad/web-push]
+gem "web-push", "~> 3.0"
+
 # Use Active Model has_secure_password [https://guides.rubyonrails.org/active_model_basics.html#securepassword]
 # gem "bcrypt", "~> 3.1.7"
 

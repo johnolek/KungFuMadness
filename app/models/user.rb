@@ -1,6 +1,7 @@
 class User < ApplicationRecord
   has_one :fighter, dependent: :destroy
   has_many :credentials, dependent: :destroy
+  has_many :push_subscriptions, dependent: :destroy
 
   normalizes :email, with: ->(email) { email.strip.downcase.presence }
 

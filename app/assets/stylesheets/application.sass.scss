@@ -53,6 +53,12 @@
   box-sizing: border-box;
 }
 
+// The hidden attribute must always win, even over author display rules like
+// .btn-kfm's inline-block (author styles otherwise beat the UA [hidden] rule).
+[hidden] {
+  display: none !important;
+}
+
 html {
   // Tiled subtle diagonal weave over the tatami tone.
   background-color: var(--kfm-tatami);
@@ -157,6 +163,31 @@ a {
     text-decoration: none;
     padding: 0.15rem 0.5rem;
   }
+
+  // button_to wraps its button in a <form>; collapse it so the Sign out control
+  // flows inline with the nav links instead of dropping to its own line.
+  form {
+    display: contents;
+  }
+}
+
+// The Sign out control, styled to read as a nav link (button_to renders a button).
+.kfm-nav-inline {
+  font-family: inherit;
+  font-size: inherit;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.15rem 0.5rem;
+  color: var(--kfm-belt-blue);
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-decoration: underline;
+
+  &:hover {
+    color: var(--kfm-belt-red);
+  }
 }
 
 .kfm-main {
@@ -246,6 +277,12 @@ a {
 }
 
 // -- Stat tables -------------------------------------------------------------
+
+// Wraps wide tables so a small viewport scrolls the table, never the whole page.
+.table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
 
 .stat-table {
   width: 100%;
@@ -384,5 +421,20 @@ a {
 
   .panel-kfm {
     padding: 0.75rem;
+  }
+}
+
+// At phone widths, tighten the nav so the links + Sign out fit without a lone
+// wrapped row.
+@media (max-width: 420px) {
+  .kfm-nav {
+    gap: 0.15rem;
+    padding: 0.4rem 0.5rem;
+  }
+
+  .kfm-nav a,
+  .kfm-nav-inline {
+    padding: 0.15rem 0.35rem;
+    letter-spacing: 0.02em;
   }
 }

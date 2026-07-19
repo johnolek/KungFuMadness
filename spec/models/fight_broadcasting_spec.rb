@@ -42,6 +42,22 @@ RSpec.describe "Fight broadcasting", type: :model do
     end
   end
 
+  describe "push notification on a new challenge" do
+    it "enqueues a challenge push job for a human opponent" do
+      expect {
+        Fight.create_challenge!(challenger: challenger, opponent: opponent, moves: moves)
+      }.to have_enqueued_job(PushChallengeNotificationJob)
+    end
+
+    it "does not enqueue a push job when the opponent is a bot" do
+      bot = create(:fighter, :bot, belt: 3, xp: 800)
+
+      expect {
+        Fight.create_challenge!(challenger: challenger, opponent: bot, moves: moves)
+      }.not_to have_enqueued_job(PushChallengeNotificationJob)
+    end
+  end
+
   describe "resolving a fight" do
     it "feeds the dojo ticker and tells the challenger it settled" do
       fight = Fight.create_challenge!(challenger: challenger, opponent: opponent, moves: moves)

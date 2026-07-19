@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_19_010600) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_19_020000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -98,6 +98,18 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_19_010600) do
     t.index ["resolved_at"], name: "index_fights_on_resolved_at"
     t.index ["status", "expires_at"], name: "index_fights_on_status_and_expires_at"
     t.index ["winner_id"], name: "index_fights_on_winner_id"
+  end
+
+  create_table "push_subscriptions", force: :cascade do |t|
+    t.string "auth_key", null: false
+    t.datetime "created_at", null: false
+    t.string "endpoint", null: false
+    t.string "p256dh_key", null: false
+    t.datetime "updated_at", null: false
+    t.string "user_agent"
+    t.bigint "user_id", null: false
+    t.index ["endpoint"], name: "index_push_subscriptions_on_endpoint", unique: true
+    t.index ["user_id"], name: "index_push_subscriptions_on_user_id"
   end
 
   create_table "solid_cable_messages", force: :cascade do |t|
@@ -251,6 +263,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_19_010600) do
   add_foreign_key "fights", "fighters", column: "challenger_id"
   add_foreign_key "fights", "fighters", column: "opponent_id"
   add_foreign_key "fights", "fighters", column: "winner_id"
+  add_foreign_key "push_subscriptions", "users"
   add_foreign_key "solid_queue_blocked_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
   add_foreign_key "solid_queue_claimed_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
   add_foreign_key "solid_queue_failed_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
