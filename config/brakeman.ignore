@@ -1,0 +1,25 @@
+{
+  "ignored_warnings": [
+    {
+      "warning_type": "Mass Assignment",
+      "fingerprint": "55dceafbc62a89796e9c1960bb76a565ddf11dcad9922aaf1768157e0485854e",
+      "note": "WebAuthn assertion: params[:credential] is the browser's PublicKeyCredential JSON (arbitrary nested authenticator data). It is not assigned to a model; it is parsed and cryptographically verified by webauthn-ruby. permit! is the documented way to accept this structure."
+    },
+    {
+      "warning_type": "Mass Assignment",
+      "fingerprint": "8bdc59dddf7646aa1a3adb2c2b7f7abe4b572f5201e2d6c238adf15d0a784c15",
+      "note": "WebAuthn registration: params[:credential] is the browser's PublicKeyCredential JSON, verified by webauthn-ruby, never mass-assigned to a model. permit! is required to accept the nested authenticator structure."
+    },
+    {
+      "warning_type": "Mass Assignment",
+      "fingerprint": "9643589553d1fb468d9bbc8a7229bc1dde3b330527b0ecf43890fbf124a82df3",
+      "note": "WebAuthn credential registration in settings: same as above — attestation JSON from the authenticator, verified by webauthn-ruby, not model mass assignment."
+    },
+    {
+      "warning_type": "Remote Code Execution",
+      "fingerprint": "2e995a290654ac0c1b7996ef41e1e28e097cb765b4e31ad39e3717c2b957458d",
+      "note": "Marshal.load(Marshal.dump(hash)) is a deep-copy of an internal, code-defined strategy template in the bot roster generator. The input is never user-supplied — no untrusted deserialization."
+    }
+  ],
+  "brakeman_version": "8.0.5"
+}

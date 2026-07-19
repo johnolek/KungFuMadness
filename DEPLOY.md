@@ -1,0 +1,175 @@
+# Deploying Kung Fu Madness to Coolify
+
+This app deploys as a **single Dockerfile-built container** plus **one PostgreSQL
+resource**. Postgres is the only stateful dependency — it serves the app, Solid
+Queue (jobs + the per-minute bot tick), and Solid Cable (live dojo broadcasts).
+There is **no Redis, no separate worker, and no persistent file volume** (the app
+has no Active Storage attachments — all state is in Postgres).
+
+Solid Queue runs *inside* Puma (`SOLID_QUEUE_IN_PUMA=1`, baked into the image), so
+a single web container also runs the job workers, the dispatcher, and the
+recurring scheduler that fires `Bots::TickJob` every minute. No second service.
+
+---
+
+## 1. Create the PostgreSQL resource
+
+In your Coolify project: **+ New Resource → Database → PostgreSQL** (16 or newer).
+
+- Note the connection string Coolify generates. Use the **internal** URL (the one
+  on Coolify's private network, e.g. `postgres://user:pass@<service>:5432/dbname`)
+  as `DATABASE_URL` for the app. Do not expose Postgres publicly.
+- The app runs `db:prepare` on every boot, so it creates the schema and runs all
+  migrations (including the Solid Queue / Solid Cable tables) automatically on the
+  first deploy. You do **not** need to run migrations by hand.
+
+## 2. Create the application
+
+**+ New Resource → Application → Public/Private Git Repository**, pointing at this
+repo.
+
+- **Build Pack: Dockerfile** (Coolify builds the repo's `Dockerfile`; do not pick
+  Nixpacks). The Dockerfile compiles JS (esbuild + Svelte) and CSS (dart-sass)
+  during `assets:precompile` in a build stage, then ships a slim image with no
+  Node and no `node_modules`.
+- **Port: 3000** (the image `EXPOSE`s 3000 and Puma listens there).
+- Coolify passes the build arg `SOURCE_COMMIT`; the Dockerfile writes it to
+  `REVISION` so the running app knows its deployed commit.
+- Set a domain (see §5) before the first deploy if you can — the passkey config
+  (`WEBAUTHN_*`) must match the final HTTPS origin.
+
+## 3. Environment variables
+
+Set these on the **application** resource. "Req?" = required for a healthy deploy.
+
+| Variable | Req? | Example | Purpose |
+|---|---|---|---|
+| `DATABASE_URL` | **Yes** | `postgres://kfm:secret@kfm-db:5432/kfm` | Postgres connection (app + jobs + cable). Use the internal Coolify URL. |
+| `RAILS_MASTER_KEY` | **Yes** | `<contents of config/master.key>` | Decrypts `config/credentials.yml.enc` and provides `secret_key_base`. This repo commits `credentials.yml.enc`; `master.key` is git-ignored, so supply it here. (Alternatively set `SECRET_KEY_BASE` instead — see note below.) |
+| `WEBAUTHN_RP_ID` | **Yes** | `kungfumadness.com` | Passkey Relying Party ID = the registrable domain (host only, no scheme/port). Passkeys are bound to this; getting it wrong makes existing passkeys unusable. |
+| `WEBAUTHN_ORIGIN` | **Yes** | `https://kungfumadness.com` | Exact browser origin (scheme + host, include port only if non-standard). Must be the real HTTPS URL. Also the fallback source for the mailer host. |
+| `WEBAUTHN_RP_NAME` | No | `Kung Fu Madness` | Human-readable name shown in the passkey prompt. Defaults to `Kung Fu Madness`. |
+| `MAIL_FROM` | **Yes** | `dojo@kungfumadness.com` | Sender for the magic-link sign-in email; also the Web Push VAPID `mailto:` subject. Without it mail sends from `dojo@localhost`. |
+| `MAIL_HOST` | No | `kungfumadness.com` | Host used to build the magic-link URL in emails. If unset, derived from `WEBAUTHN_ORIGIN`'s host, else `localhost`. Usually leave unset. |
+| `SMTP_ADDRESS` | **Yes\*** | `smtp.postmarkapp.com` | SMTP server. \*Required for sign-in to work at all — the only login path is the emailed magic link. |
+| `SMTP_PORT` | No | `587` | SMTP port. Default `587` (STARTTLS). |
+| `SMTP_USERNAME` | **Yes\*** | `apikey` / account user | SMTP auth user. |
+| `SMTP_PASSWORD` | **Yes\*** | `<smtp password/token>` | SMTP auth password/token. |
+| `SMTP_AUTHENTICATION` | No | `plain` | `plain`, `login`, or `cram_md5`. Default `plain`. |
+| `SMTP_DOMAIN` | No | `kungfumadness.com` | HELO domain some providers require. |
+| `VAPID_PUBLIC_KEY` | No | `BJ...` (base64url) | Web Push public key. Without the pair, the opt-in push UI hides itself and everything else still works. Generate with `bin/rails push:generate_vapid`. |
+| `VAPID_PRIVATE_KEY` | No | `x1...` (base64url) | Web Push private key (from the same `push:generate_vapid` run). |
+| `WEB_CONCURRENCY` | No (baked `2`) | `2` | Puma worker processes. Override for a bigger box. |
+| `JOB_CONCURRENCY` | No (default `1`) | `1` | Solid Queue worker processes (each runs 3 threads). Bump if job volume grows. |
+| `RAILS_MAX_THREADS` | No (default `3`) | `3` | Puma threads per worker. |
+| `SOLID_QUEUE_IN_PUMA` | No (baked `1`) | `1` | Runs jobs + recurring scheduler in Puma. **Leave baked**; do not set to empty or the bot tick / daily jobs stop running. |
+| `RAILS_LOG_LEVEL` | No | `info` | Log verbosity. Default `info`. |
+
+\* SMTP is functionally required: the **only** way to sign in is the emailed magic
+link. If SMTP is missing the app still boots and passes health checks, but nobody
+can log in. `raise_delivery_errors` is off, so a bad SMTP config fails quietly
+(check logs) rather than 500-ing the sign-in request.
+
+**`RAILS_MASTER_KEY` vs `SECRET_KEY_BASE`.** This repo commits an encrypted
+`config/credentials.yml.enc`, so the recommended path is to set `RAILS_MASTER_KEY`
+(the contents of your local `config/master.key`). If you would rather not ship the
+master key, set `SECRET_KEY_BASE` to a random 128-hex string (`bin/rails secret`)
+instead — nothing in the app currently reads a credential out of
+`credentials.yml.enc` at runtime, so either works. Pick one.
+
+## 4. First deploy → one-off bootstrap (brains)
+
+Deploy. On boot the container runs `db:prepare` (schema + migrations) and starts
+Puma with Solid Queue in-process. `/up` should go green within ~20s.
+
+**The ~200-bot roster seeds itself automatically.** `db:prepare` runs `db/seeds.rb`
+when it first creates the database, so the full belt pyramid (Tofu → 9th-dan
+PepsiDad) is populated on the first deploy with no manual step. The recurring
+scheduler starts ticking `Bots::TickJob` every minute immediately, so the world is
+alive out of the box.
+
+What is **not** seeded automatically is the trained neural-net bot brains. Bots are
+fully playable without them — `Bots::Brain` falls back to weighted-random
+("biased") move sampling when the `brains` table is empty — so this is polish, not
+a hard dependency. To give the bots real scouting-based best-response, run this
+one-off command once, in Coolify's **Terminal / Execute Command** for the app:
+
+```bash
+bin/rails kfm:bootstrap
+```
+
+It is **idempotent and safe to re-run**. It:
+
+1. Seeds the roster if it's somehow sparse (fewer than 150 bots) — a no-op safety
+   net, since `db:prepare` already seeded it.
+2. Trains the NN brains **once** (only if the `brains` table is empty), with modest
+   settings (`FIGHTS=1500 BOTS=80 EPOCHS=20`) that finish in ~25s.
+
+**Why a one-off and not baked into boot?** Training takes real time and we want
+boot (and the health check) to stay fast, and we don't want every redeploy to
+retrain. If you want a sharper net, pass the same knobs `bots:train` accepts, e.g.
+`FIGHTS=5000 EPOCHS=40 bin/rails kfm:bootstrap`, or run the full-quality trainer
+later with `bin/rails bots:train` (it just adds a new brain version, picked up on
+the next cache clear / boot).
+
+Once bootstrapped, the recurring scheduler (running inside Puma) drives the world:
+`Bots::TickJob` every minute (logins/logouts, bot challenges and responses),
+`RustDecayJob` daily at 4:00, `ExpireChallengesJob` daily at 4:05.
+
+### Generating VAPID keys (optional, for push notifications)
+
+Push notifications are opt-in and the app runs fine without them. To enable them,
+generate a keypair **once** and set both values as env vars, then redeploy:
+
+```bash
+bin/rails push:generate_vapid
+# prints:
+#   VAPID_PUBLIC_KEY=...
+#   VAPID_PRIVATE_KEY=...
+```
+
+Run it locally or in the container terminal; copy the two lines into the app's env
+vars. Keep the pair stable — regenerating invalidates existing browser
+subscriptions.
+
+## 5. Domain, SSL, and the reverse proxy
+
+- Point your domain at the app in Coolify and let Coolify provision Let's Encrypt
+  TLS. Coolify's proxy (Traefik) terminates SSL and forwards plain HTTP to the
+  container on port 3000.
+- `production.rb` sets `config.assume_ssl = true` and `config.force_ssl = true`,
+  which is exactly right behind an SSL-terminating proxy: Rails trusts the
+  `X-Forwarded-Proto` header, issues secure cookies, and sends HSTS.
+- **`WEBAUTHN_ORIGIN` / `WEBAUTHN_RP_ID` must match the final HTTPS domain** before
+  anyone registers a passkey. `WEBAUTHN_ORIGIN=https://<domain>`,
+  `WEBAUTHN_RP_ID=<domain>` (host only). A mismatch makes passkey registration and
+  login fail in the browser with an opaque error.
+- The health check path is **`/up`** (returns 200 when the app boots cleanly). The
+  Dockerfile already declares a `HEALTHCHECK` against it; you can also point
+  Coolify's health check at `/up`.
+
+## 6. Post-deploy smoke checklist
+
+- [ ] `/up` returns 200 (green in Coolify).
+- [ ] The landing page and `GET /sign-up` render with styling (CSS/JS assets load
+      — confirms `assets:precompile` shipped in the image).
+- [ ] Logs show Solid Queue starting inside Puma and the scheduler scheduling
+      recurring tasks (grep the container logs for `SolidQueue` / `scheduling` /
+      `bots_tick`).
+- [ ] The leaderboard (`/leaderboard`) and dojo show bots (seeded automatically on
+      first boot); within a minute or two you see bot activity (online/offline,
+      challenges). Running `kfm:bootstrap` adds trained brains on top.
+- [ ] **Sign up** with your email → you receive the magic-link email → clicking it
+      logs you in. (This exercises SMTP end-to-end; if no email arrives, fix
+      `SMTP_*` and check logs.)
+- [ ] **Register a passkey** from settings and sign in with it. If the browser
+      rejects it, your `WEBAUTHN_RP_ID` / `WEBAUTHN_ORIGIN` don't match the domain.
+- [ ] (Optional) With VAPID keys set, the "Challenge alerts" opt-in appears for a
+      verified fighter and a subscription registers without console errors.
+
+## 7. Redeploys
+
+Just push to the deployed branch (or trigger a redeploy). Each deploy rebuilds the
+image, runs `db:prepare` (new migrations apply automatically), and restarts. The
+roster and brains persist in Postgres; `kfm:bootstrap` is a no-op on a populated
+database, so you never need to re-run it.
