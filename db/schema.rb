@@ -10,10 +10,21 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_19_020000) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_19_030000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
+
+  create_table "brains", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.jsonb "feature_mask", default: [], null: false
+    t.string "name", null: false
+    t.jsonb "training_meta", default: {}, null: false
+    t.datetime "updated_at", null: false
+    t.integer "version", null: false
+    t.jsonb "weights", default: {}, null: false
+    t.index ["name", "version"], name: "index_brains_on_name_and_version", unique: true
+  end
 
   create_table "credentials", force: :cascade do |t|
     t.datetime "created_at", null: false

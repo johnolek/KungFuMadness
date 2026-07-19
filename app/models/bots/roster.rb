@@ -8,7 +8,7 @@ module Bots
   # rare handful of blacks and dans, with a spread of "legend" personalities at the
   # low-to-mid belts (the scoutable tutorial bots) and PepsiDad alone at 9th dan.
   # Brains scale with belt — pattern loops down low (fully readable), weighted
-  # sampling through the middle, hard-to-scout "adaptive" up top — and every bot
+  # sampling through the middle, trained "nn" master brains up top — and every bot
   # gets a persona whose activity window is drawn from a spread of UTC archetypes,
   # so no timezone ever finds the dojo empty.
   module Roster
@@ -67,7 +67,7 @@ module Bots
                     attack_weights: { low: 2, mid: 2, high: 3 },
                     block_weights: { low: 2, mid: 2, high: 2 } } },
       { name: "PepsiDad", belt: 17,
-        strategy: { type: "adaptive", epsilon: 0.05,
+        strategy: { type: "nn", brain: "master", epsilon: 0.05,
                     attack_weights: { low: 3, mid: 4, high: 3 },
                     block_weights: { low: 3, mid: 4, high: 3 } } }
     ].freeze
@@ -159,7 +159,7 @@ module Bots
       elsif belt <= 6
         biased_strategy(rng, epsilon_range: 0.08..0.16)
       else
-        adaptive_strategy(rng)
+        nn_strategy(rng)
       end
     end
 
@@ -184,11 +184,13 @@ module Bots
       }
     end
 
-    # "adaptive" falls back to biased today, but low epsilon and flat, evenly-spread
-    # weights make these top-belt bots genuinely hard to read.
-    def adaptive_strategy(rng)
+    # Top belts run the trained "master" brain: predict the opponent and best-respond.
+    # The flat weights + low epsilon are the biased fallback used until the brains
+    # table is populated (or against opponents with no scoutable history).
+    def nn_strategy(rng)
       {
-        type: "adaptive",
+        type: "nn",
+        brain: "master",
         epsilon: rand_in(0.04..0.08, rng).round(2),
         attack_weights: flat_weights(rng),
         block_weights: flat_weights(rng)

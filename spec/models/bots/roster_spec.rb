@@ -38,7 +38,7 @@ RSpec.describe Bots::Roster do
     it "attaches a persona and a brain type to every bot" do
       specs.each do |spec|
         expect(spec[:strategy]).to include(:persona)
-        expect(spec[:strategy][:type]).to be_in(%w[pattern biased adaptive])
+        expect(spec[:strategy][:type]).to be_in(%w[pattern biased nn])
       end
     end
 
