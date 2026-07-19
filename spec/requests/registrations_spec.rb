@@ -57,14 +57,14 @@ RSpec.describe "Registrations (sign-up)", type: :request do
 
       it "surfaces the error (the fighter name is public)" do
         post signup_path, params: params.merge(email: "new@example.com")
-        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response).to have_http_status(:unprocessable_content)
       end
     end
 
     context "with an invalid email" do
       it "re-renders with an error" do
         post signup_path, params: { username: "Fresh", email: "not-an-email" }
-        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response).to have_http_status(:unprocessable_content)
       end
     end
   end

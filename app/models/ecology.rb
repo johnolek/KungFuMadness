@@ -1,3 +1,5 @@
+require "zlib"
+
 # The bot ecology as a balance test. Runs the same decision loop as
 # {Bots::TickJob} — personas log on and off, challenge online peers within belt
 # reach, respond or decline per temperament — but entirely in memory against
@@ -91,7 +93,11 @@ module Ecology
   def build_fighters(roster_size, seed)
     Bots::Roster.generate(target: roster_size, seed: seed).each_with_index.map do |spec, i|
       strategy = spec[:strategy].deep_stringify_keys
-      xp = Bots::Roster.seed_xp(spec[:belt], Random.new(spec[:name].hash))
+      # Seed each fighter's XP from a STABLE hash of its name. String#hash is
+      # randomized per process, which silently broke the sim's cross-process
+      # determinism (a run could over/undershoot the fight target run to run);
+      # Zlib.crc32 is deterministic, so a given seed always reproduces exactly.
+      xp = Bots::Roster.seed_xp(spec[:belt], Random.new(Zlib.crc32(spec[:name])))
       SimFighter.new(
         id: i, name: spec[:name], belt: spec[:belt], xp: xp, strategy: strategy,
         start_belt: spec[:belt], wins: 0, losses: 0, draws: 0,

@@ -24,7 +24,7 @@ module Settings
       registration = session[:credential_registration]
 
       if registration.blank?
-        return render json: { error: "Your session expired. Please try again." }, status: :unprocessable_entity
+        return render json: { error: "Your session expired. Please try again." }, status: :unprocessable_content
       end
 
       webauthn_credential = WebAuthn::Credential.from_create(credential_param)
@@ -40,9 +40,9 @@ module Settings
       session.delete(:credential_registration)
       render json: { redirect_url: settings_credentials_path }
     rescue WebAuthn::Error => e
-      render json: { error: "Passkey could not be verified: #{e.message}" }, status: :unprocessable_entity
+      render json: { error: "Passkey could not be verified: #{e.message}" }, status: :unprocessable_content
     rescue ActiveRecord::RecordInvalid => e
-      render json: { error: e.record.errors.full_messages.to_sentence }, status: :unprocessable_entity
+      render json: { error: e.record.errors.full_messages.to_sentence }, status: :unprocessable_content
     end
 
     # Email-first delta from the tracker baseline: removing the last passkey is

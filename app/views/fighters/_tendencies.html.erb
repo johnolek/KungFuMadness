@@ -1,0 +1,60 @@
+<%# Scouting tendency tables for a profile. Local: scouting (a Scouting instance).
+    Attack/block height distributions (overall, last 10, per round) as retro
+    stat-tables with static bar meters, plus KO rate, average length, and win
+    rate by belt gap. %>
+<div class="panel-kfm">
+  <div class="panel-kfm-title">Scouting report</div>
+
+  <% if scouting.any? %>
+    <p class="stat-line tendency-note">
+      Read from <strong><%= scouting.sample_size %></strong>
+      resolved <%= "fight".pluralize(scouting.sample_size) %>.
+    </p>
+
+    <% [ [ "Attack heights", :attack ], [ "Block heights", :block ] ].each do |label, kind| %>
+      <h3 class="tendency-h"><%= label %></h3>
+      <div class="table-scroll">
+        <table class="stat-table tendency-table">
+          <thead>
+            <tr><th>Split</th><th>Low</th><th>Mid</th><th>High</th><th>n</th></tr>
+          </thead>
+          <tbody>
+            <% rows = [
+                 [ "Overall", kind == :attack ? scouting.attack_distribution : scouting.block_distribution ],
+                 [ "Last 10", kind == :attack ? scouting.attack_distribution(recent: true) : scouting.block_distribution(recent: true) ]
+               ]
+               (1..3).each do |r|
+                 rows << [ "Round #{r}", kind == :attack ? scouting.attack_distribution(round: r) : scouting.block_distribution(round: r) ]
+               end %>
+            <% rows.each do |split, dist| %>
+              <tr>
+                <td class="tendency-split"><%= split %></td>
+                <td><%= tendency_meter(dist, :low) %></td>
+                <td><%= tendency_meter(dist, :mid) %></td>
+                <td><%= tendency_meter(dist, :high) %></td>
+                <td><%= dist.total %></td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    <% end %>
+
+    <h3 class="tendency-h">Fight stats</h3>
+    <% gaps = scouting.win_rate_by_gap %>
+    <div class="table-scroll">
+      <table class="stat-table tendency-table">
+        <tbody>
+          <tr><td class="tendency-split">KO rate</td><td><%= scouting.ko_rate %>%</td></tr>
+          <tr><td class="tendency-split">Avg. fight length</td><td><%= scouting.average_length %> rounds</td></tr>
+          <tr><td class="tendency-split">Win rate vs higher belts</td><td><%= win_rate_display(gaps[:higher]) %></td></tr>
+          <tr><td class="tendency-split">Win rate vs same belt</td><td><%= win_rate_display(gaps[:same]) %></td></tr>
+          <tr><td class="tendency-split">Win rate vs lower belts</td><td><%= win_rate_display(gaps[:lower]) %></td></tr>
+        </tbody>
+      </table>
+    </div>
+  <% else %>
+    <p>No resolved fights on record yet — this fighter is a total unknown.
+       Stepping onto the mat blind.</p>
+  <% end %>
+</div>

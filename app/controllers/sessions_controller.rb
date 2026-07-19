@@ -19,7 +19,7 @@ class SessionsController < ApplicationController
     authentication = session[:authentication]
 
     if authentication.blank?
-      return render json: { error: "Your sign-in session expired. Please try again." }, status: :unprocessable_entity
+      return render json: { error: "Your sign-in session expired. Please try again." }, status: :unprocessable_content
     end
 
     webauthn_credential = WebAuthn::Credential.from_get(credential_param)
@@ -36,7 +36,7 @@ class SessionsController < ApplicationController
     sign_in(stored_credential.user)
     render json: { redirect_url: root_path }
   rescue WebAuthn::Error, ActiveRecord::RecordNotFound
-    render json: { error: "We couldn't verify that passkey." }, status: :unprocessable_entity
+    render json: { error: "We couldn't verify that passkey." }, status: :unprocessable_content
   end
 
   def destroy

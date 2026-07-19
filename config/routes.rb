@@ -28,6 +28,9 @@ Rails.application.routes.draw do
   # Roster + public fighter profiles (scouting).
   resources :fighters, only: %i[index show]
 
+  # Standings: all-time XP leaders + most active this week (humans and bots).
+  get "leaderboard", to: "leaderboard#show", as: :leaderboard
+
   # Challenge lifecycle: new/create commit the challenger's moves; show is the
   # opponent's blind respond page; accept resolves, decline rejects.
   resources :challenges, only: %i[new create show] do

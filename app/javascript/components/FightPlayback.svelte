@@ -50,6 +50,7 @@
       {#if i < revealed}
         <li class="round">
           <div class="round__head">Round {round.round}</div>
+          {#if round.announcer}<div class="round__call">{round.announcer}</div>{/if}
           <div>{attackLine(fight.challenger.name, fight.challenger.moves[i], round.challenger_damage)}</div>
           <div>{attackLine(fight.opponent.name, fight.opponent.moves[i], round.opponent_damage)}</div>
           <div class="round__hp">
@@ -79,6 +80,17 @@
           <strong class={deltaClass(fight.opponent.xp_delta)}>{fight.opponent.xp_delta} XP</strong>
         </span>
       </div>
+      {#each [fight.challenger, fight.opponent] as fighter}
+        {#if fighter.belt_change}
+          <div class="banner__belt banner__belt--{fighter.belt_change.direction}">
+            {#if fighter.belt_change.direction === "promotion"}
+              {fighter.name} is promoted to {fighter.belt_change.to_belt_name} belt!
+            {:else}
+              {fighter.name} is demoted to {fighter.belt_change.to_belt_name} belt.
+            {/if}
+          </div>
+        {/if}
+      {/each}
     </div>
   {/if}
 </div>
@@ -143,6 +155,15 @@
     margin-bottom: 0.2rem;
   }
 
+  .round__call {
+    font-family: var(--kfm-font-display, "Courier New", monospace);
+    font-weight: bold;
+    font-style: italic;
+    letter-spacing: 0.02em;
+    margin-bottom: 0.3rem;
+    color: var(--kfm-accent, #b83d3d);
+  }
+
   .round__hp {
     margin-top: 0.3rem;
     font-size: 0.9rem;
@@ -195,4 +216,15 @@
 
   .xp-up { color: #7ed07e; }
   .xp-down { color: #e88; }
+
+  .banner__belt {
+    margin-top: 0.5rem;
+    font-family: var(--kfm-font-display, "Courier New", monospace);
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-size: 0.95rem;
+  }
+  .banner__belt--promotion { color: #7ed07e; }
+  .banner__belt--demotion { color: #e88; }
 </style>

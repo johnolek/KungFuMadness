@@ -35,7 +35,7 @@ RSpec.describe "Settings::Credentials", type: :request do
 
     it "rejects a create with no pending challenge" do
       post settings_credentials_path, params: { credential: { fake: true } }, as: :json
-      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response).to have_http_status(:unprocessable_content)
     end
   end
 

@@ -189,6 +189,22 @@
           <span class="opp__record">Record {data.opponent.record}</span>
         </div>
 
+        {#if data.tendency}
+          <div class="tendency">
+            <div class="tendency__row">
+              <span class="tendency__label">Attacks</span>
+              <span>high {data.tendency.attack.high}% / mid {data.tendency.attack.mid}% / low {data.tendency.attack.low}%</span>
+            </div>
+            <div class="tendency__row">
+              <span class="tendency__label">Blocks</span>
+              <span>high {data.tendency.block.high}% / mid {data.tendency.block.mid}% / low {data.tendency.block.low}%</span>
+            </div>
+            <div class="tendency__row tendency__row--meta">
+              KO rate {data.tendency.ko_rate}% · {data.tendency.fights} resolved
+            </div>
+          </div>
+        {/if}
+
         <details class="scout">
           <summary>Scouting — last {data.scouting.length} fights</summary>
           {#if data.scouting.length === 0}
@@ -291,6 +307,24 @@
     text-transform: uppercase;
     vertical-align: middle;
   }
+
+  .tendency {
+    border: 2px solid var(--kfm-border);
+    background: rgba(0, 0, 0, 0.03);
+    padding: 0.4rem 0.6rem;
+    margin: 0.4rem 0 0.6rem;
+    font-size: 0.8rem;
+  }
+  .tendency__row { display: flex; gap: 0.5rem; }
+  .tendency__label {
+    font-weight: bold;
+    text-transform: uppercase;
+    font-size: 0.7rem;
+    letter-spacing: 0.04em;
+    min-width: 3.8rem;
+    color: var(--kfm-ink-soft);
+  }
+  .tendency__row--meta { color: var(--kfm-ink-soft); margin-top: 0.15rem; }
 
   .scout { margin: 0.5rem 0 0.75rem; }
   .scout summary { cursor: pointer; font-weight: bold; text-transform: uppercase; font-size: 0.8rem; }

@@ -12,6 +12,22 @@
       <p class="stat-line"><strong><%= @fighter.xp %></strong> XP</p>
       <p class="stat-line">Record: <strong><%= @fighter.record %></strong> (W-L-D)</p>
       <p class="stat-line">Open challenges: <%= @pending_count %></p>
+
+      <% form = @scouting.recent_form %>
+      <% if form.any? %>
+        <div class="form-strip" aria-label="Recent form, newest first">
+          <span class="form-strip__label">Form</span>
+          <% form.each do |bout| %>
+            <span class="form-box form-box--<%= bout[:result].downcase %>"
+                  title="<%= { 'W' => 'Win', 'L' => 'Loss', 'D' => 'Draw' }[bout[:result]] %><%= ' (KO)' if bout[:ko] %>">
+              <%= bout[:result] %><% if bout[:ko] %><span class="form-box__ko">*</span><% end %>
+            </span>
+          <% end %>
+        </div>
+        <% callout = streak_callout(@scouting.streak) %>
+        <% if callout %><p class="stat-line streak-callout"><%= callout %></p><% end %>
+      <% end %>
+
       <% if current_fighter && current_fighter != @fighter %>
         <p class="stat-line">
           <%= link_to "Challenge #{@fighter.name}", new_challenge_path(opponent: @fighter.id),
@@ -21,6 +37,8 @@
     </div>
   </div>
 </div>
+
+<%= render "fighters/tendencies", scouting: @scouting %>
 
 <div class="panel-kfm">
   <div class="panel-kfm-title">Match history</div>

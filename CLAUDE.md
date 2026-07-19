@@ -114,7 +114,9 @@ broadcasts a `belt_change` promotion/demotion line to the dojo ticker via
 **Ecology sim (the balance authority).** `bin/rails balance:ecology` runs the same
 tick loop in memory against `Bots::Roster` fighters — seeded RNG, no DB / jobs /
 cable, fights resolve straight through `FightResolver` + `Xp::Rules` — until N
-fights settle (`N=`, `BOTS=`, `SEED=` to tune), then reports belt distribution
+fights settle. Per-fighter starting XP is seeded from a STABLE name hash
+(`Zlib.crc32`), not `String#hash` (which Ruby randomizes per process and would
+make a "seeded" run drift between processes) (`N=`, `BOTS=`, `SEED=` to tune), then reports belt distribution
 before/after, per-tier XP percentiles, promotion/demotion churn, and the Tofu
 population. The `Ecology` spec asserts the population doesn't collapse (no belt
 >40%, both promotions and demotions occur, Tofu <10%, belts 1–9 inhabited) at a
@@ -139,6 +141,36 @@ belongs in the component's `<style>` block.
 
 `app/javascript/components/DojoPlaceholder.svelte` is a proof island mounted on
 the root page — it exercises the full ERB → island → props → `<style>` pipeline.
+
+## Scouting, leaderboard & playback flavor
+
+**`Scouting`** (`app/models/scouting.rb`) is a plain-Ruby read model over a
+fighter's RESOLVED history (never pending/sealed moves). It exposes attack/block
+height `Distribution`s (overall, a last-10 split, and per round 1–3), KO rate,
+average fight length, win rate bucketed by opponent belt gap (`Rate` by
+higher/same/lower), a newest-first `recent_form` W/L/D list, and `#streak`.
+`#strip_summary` is the compact JSON the challenge modal and the no-JS scouting
+partial read. It powers the profile "Scouting report" panel
+(`fighters/_tendencies`, static CSS bar meters via the `tendency_meter` helper)
+and the form strip on profiles.
+
+**Leaderboard** — `GET /leaderboard` (`LeaderboardController`, navbar link) shows
+top-25 all-time XP and most-active-this-week (resolved fights in the last 7 days),
+humans and bots together. Verified fighters only, like the roster.
+
+**Announcer flavor** — `Fight#playback_payload` now carries a deterministic,
+replay-stable announcer `line` per round (`FightAnnouncer`, chosen by fight id +
+round from a small pool — mutual block / thunderous roll / traded / one lands /
+KO), plus a per-side `belt_change` callout (promotion/demotion) derived from the
+snapshot belt + XP + delta. `FightPlayback.svelte` renders both; no animation.
+
+**Footer** — the retro "visitor counter" is the real all-time resolved-fight
+count (`resolved_fight_tally` helper, `Rails.cache` 5-min, zero-padded), beside
+two pure-CSS 88×31 badges.
+
+**Fonts** — still the monospace fallback stack; no open pixel display font is
+present on the system or vendored, so the `--kfm-font-display` TODO stands (no
+network fetch allowed).
 
 ---
 

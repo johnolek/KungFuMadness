@@ -15,15 +15,15 @@ class RegistrationsController < ApplicationController
 
     if username.blank?
       @user.errors.add(:username, "is required")
-      return render :new, status: :unprocessable_entity
+      return render :new, status: :unprocessable_content
     end
     if User.exists?(username: username)
       @user.errors.add(:username, "is already taken")
-      return render :new, status: :unprocessable_entity
+      return render :new, status: :unprocessable_content
     end
     if email.blank? || !email.match?(URI::MailTo::EMAIL_REGEXP)
       @user.errors.add(:email, "must be a valid email address")
-      return render :new, status: :unprocessable_entity
+      return render :new, status: :unprocessable_content
     end
 
     if (existing = User.find_by("lower(email) = ?", email))
@@ -43,13 +43,13 @@ class RegistrationsController < ApplicationController
     email = params[:email].to_s.strip.downcase
 
     if username.blank?
-      return render json: { error: "Please choose a username." }, status: :unprocessable_entity
+      return render json: { error: "Please choose a username." }, status: :unprocessable_content
     end
     if User.exists?(username: username)
-      return render json: { error: "That username is taken." }, status: :unprocessable_entity
+      return render json: { error: "That username is taken." }, status: :unprocessable_content
     end
     if email.blank? || !email.match?(URI::MailTo::EMAIL_REGEXP)
-      return render json: { error: "Please enter a valid email address." }, status: :unprocessable_entity
+      return render json: { error: "Please enter a valid email address." }, status: :unprocessable_content
     end
 
     webauthn_id = WebAuthn.generate_user_id
@@ -75,7 +75,7 @@ class RegistrationsController < ApplicationController
     registration = session[:registration]
 
     if registration.blank?
-      return render json: { error: "Your registration session expired. Please try again." }, status: :unprocessable_entity
+      return render json: { error: "Your registration session expired. Please try again." }, status: :unprocessable_content
     end
 
     webauthn_credential = WebAuthn::Credential.from_create(credential_param)
@@ -94,9 +94,9 @@ class RegistrationsController < ApplicationController
     sign_in(user)
     render json: { redirect_url: root_path }
   rescue WebAuthn::Error => e
-    render json: { error: "Passkey could not be verified: #{e.message}" }, status: :unprocessable_entity
+    render json: { error: "Passkey could not be verified: #{e.message}" }, status: :unprocessable_content
   rescue ActiveRecord::RecordInvalid => e
-    render json: { error: e.record.errors.full_messages.to_sentence }, status: :unprocessable_entity
+    render json: { error: e.record.errors.full_messages.to_sentence }, status: :unprocessable_content
   end
 
   private

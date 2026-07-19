@@ -30,6 +30,7 @@
       <nav class="kfm-nav" aria-label="main navigation">
         <%= link_to "Dojo", root_path %>
         <%= link_to "Fighters", fighters_path %>
+        <%= link_to "Leaderboard", leaderboard_path %>
         <% if signed_in? %>
           <% if current_fighter %>
             <%= link_to "My Profile", fighter_path(current_fighter) %>
@@ -63,7 +64,14 @@
     </main>
 
     <footer class="kfm-footer">
-      <p>You are visitor #000001337 &middot; Best viewed in any browser &middot; Emu. 2002</p>
+      <p>
+        <span class="kfm-footer__count"><%= resolved_fight_tally %></span> fights settled all-time
+        &middot; Best viewed in any browser &middot; Emu. 2002
+      </p>
+      <div class="kfm-footer__badges">
+        <span class="badge-88">KFM — powered by<br>rice &amp; dedication</span>
+        <span class="badge-88 badge-88--alt">No emoji<br>were harmed</span>
+      </div>
     </footer>
 
     <%# The single challenge/respond modal instance, opened via data-attribute

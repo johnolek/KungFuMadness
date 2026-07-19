@@ -11,7 +11,7 @@ class ChallengesController < ApplicationController
     if @opponent == current_fighter
       respond_to do |format|
         format.html { redirect_to fighters_path, alert: "You can't challenge yourself." }
-        format.json { render json: { error: "You can't challenge yourself." }, status: :unprocessable_entity }
+        format.json { render json: { error: "You can't challenge yourself." }, status: :unprocessable_content }
       end
       return
     end
@@ -42,12 +42,12 @@ class ChallengesController < ApplicationController
   rescue Fight::ChallengeError => e
     respond_to do |format|
       format.html { redirect_to fighter_path(params[:opponent]), alert: e.message }
-      format.json { render json: { error: e.message }, status: :unprocessable_entity }
+      format.json { render json: { error: e.message }, status: :unprocessable_content }
     end
   rescue JSON::ParserError, KeyError, ArgumentError
     respond_to do |format|
       format.html { redirect_to new_challenge_path(opponent: params[:opponent]), alert: "Those moves didn't make sense — try again." }
-      format.json { render json: { error: "Those moves didn't make sense — try again." }, status: :unprocessable_entity }
+      format.json { render json: { error: "Those moves didn't make sense — try again." }, status: :unprocessable_content }
     end
   end
 
@@ -92,7 +92,7 @@ class ChallengesController < ApplicationController
   rescue JSON::ParserError, KeyError, ArgumentError
     respond_to do |format|
       format.html { redirect_to challenge_path(@fight), alert: "Those moves didn't make sense — try again." }
-      format.json { render json: { error: "Those moves didn't make sense — try again." }, status: :unprocessable_entity }
+      format.json { render json: { error: "Those moves didn't make sense — try again." }, status: :unprocessable_content }
     end
   end
 
@@ -119,7 +119,7 @@ class ChallengesController < ApplicationController
   def deny(message)
     respond_to do |format|
       format.html { redirect_to root_path, alert: message }
-      format.json { render json: { error: message }, status: :unprocessable_entity }
+      format.json { render json: { error: message }, status: :unprocessable_content }
     end
   end
 
@@ -131,7 +131,8 @@ class ChallengesController < ApplicationController
       mode: "challenge",
       action: challenges_path,
       opponent: fighter_card(opponent, belt: opponent.belt),
-      scouting: scout_payload(opponent)
+      scouting: scout_payload(opponent),
+      tendency: tendency_payload(opponent)
     }
   end
 
@@ -149,7 +150,8 @@ class ChallengesController < ApplicationController
       accept_url: accept_challenge_path(@fight),
       decline_url: decline_challenge_path(@fight),
       opponent: fighter_card(@fight.challenger, belt: @fight.challenger_belt),
-      scouting: scout_payload(@fight.challenger)
+      scouting: scout_payload(@fight.challenger),
+      tendency: tendency_payload(@fight.challenger)
     }
   end
 
@@ -165,6 +167,12 @@ class ChallengesController < ApplicationController
       record: "#{fighter.wins}-#{fighter.losses}-#{fighter.draws}",
       url: fighter_path(fighter)
     }
+  end
+
+  # Compact tendency strip for the modal — overall attack/block height splits over
+  # the fighter's full resolved history. Nil when there's nothing to read yet.
+  def tendency_payload(fighter)
+    Scouting.new(fighter: fighter).strip_summary
   end
 
   # Compact last-N resolved fights from +fighter+'s perspective for modal scouting.

@@ -1,0 +1,54 @@
+<% content_for :title, "Leaderboard — Kung Fu Madness" %>
+
+<div class="leaderboard-grid">
+  <div class="panel-kfm">
+    <div class="panel-kfm-title">Top <%= LeaderboardController::TOP_LIMIT %> — all-time XP</div>
+    <% if @top.any? %>
+      <div class="table-scroll">
+        <table class="stat-table">
+          <thead>
+            <tr><th>#</th><th>Fighter</th><th>Belt</th><th>XP</th><th>Record</th></tr>
+          </thead>
+          <tbody>
+            <% @top.each_with_index do |fighter, i| %>
+              <tr>
+                <td class="rank-cell"><%= i + 1 %></td>
+                <td><%= link_to fighter_display_name(fighter), fighter_path(fighter) %></td>
+                <td><%= belt_chip(fighter.belt) %></td>
+                <td><%= number_with_delimiter(fighter.xp) %></td>
+                <td><%= fighter.record %></td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    <% else %>
+      <p>No fighters have stepped onto the mat yet. The dojo awaits its first legend.</p>
+    <% end %>
+  </div>
+
+  <div class="panel-kfm">
+    <div class="panel-kfm-title">Most active this week</div>
+    <% if @active.any? %>
+      <div class="table-scroll">
+        <table class="stat-table">
+          <thead>
+            <tr><th>#</th><th>Fighter</th><th>Belt</th><th>Fights</th></tr>
+          </thead>
+          <tbody>
+            <% @active.each_with_index do |(fighter, count), i| %>
+              <tr>
+                <td class="rank-cell"><%= i + 1 %></td>
+                <td><%= link_to fighter_display_name(fighter), fighter_path(fighter) %></td>
+                <td><%= belt_chip(fighter.belt) %></td>
+                <td><%= count %></td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    <% else %>
+      <p>The dojo has been quiet this week — no fights settled in the last seven days.</p>
+    <% end %>
+  </div>
+</div>

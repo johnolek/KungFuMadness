@@ -15,7 +15,7 @@ class PushSubscriptionsController < ApplicationController
     if subscription.persisted?
       render json: { ok: true }
     else
-      render json: { ok: false, errors: subscription.errors.full_messages }, status: :unprocessable_entity
+      render json: { ok: false, errors: subscription.errors.full_messages }, status: :unprocessable_content
     end
   end
 

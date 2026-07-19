@@ -30,7 +30,7 @@ RSpec.describe "Sessions (passkey auth)", type: :request do
 
     it "rejects a create with no pending challenge" do
       post login_path, params: { credential: { fake: true } }, as: :json
-      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response).to have_http_status(:unprocessable_content)
     end
   end
 

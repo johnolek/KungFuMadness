@@ -165,24 +165,43 @@ class Fight < ApplicationRecord
   def playback_payload
     return nil unless resolved?
 
+    last_round = fight_rounds.map(&:round).max
+    challenger_base = Belt.base_damage_for(challenger_belt)
+    opponent_base = Belt.base_damage_for(opponent_belt)
+
     {
       id: id,
       ko: ko,
       resolved_at: resolved_at,
       winner_side: winner_side,
       challenger: fighter_summary(challenger, belt: challenger_belt).merge(
-        xp_delta: challenger_xp_delta, moves: moves_payload(challenger)
+        xp_delta: challenger_xp_delta,
+        moves: moves_payload(challenger),
+        belt_change: belt_change_for(challenger_belt, challenger_xp, challenger_xp_delta)
       ),
       opponent: fighter_summary(opponent, belt: opponent_belt).merge(
-        xp_delta: opponent_xp_delta, moves: moves_payload(opponent)
+        xp_delta: opponent_xp_delta,
+        moves: moves_payload(opponent),
+        belt_change: belt_change_for(opponent_belt, opponent_xp, opponent_xp_delta)
       ),
       rounds: fight_rounds.map do |r|
+        ko_round = ko && r.round == last_round
         {
           round: r.round,
           challenger_damage: r.challenger_damage,
           opponent_damage: r.opponent_damage,
           challenger_hp_after: r.challenger_hp_after,
-          opponent_hp_after: r.opponent_hp_after
+          opponent_hp_after: r.opponent_hp_after,
+          announcer: FightAnnouncer.line(
+            seed: id,
+            round: r.round,
+            challenger_damage: r.challenger_damage,
+            opponent_damage: r.opponent_damage,
+            challenger_base: challenger_base,
+            opponent_base: opponent_base,
+            ko: ko_round,
+            winner_name: ko_round ? winner&.display_name : nil
+          )
         }
       end
     }
@@ -362,6 +381,26 @@ class Fight < ApplicationRecord
     ordered_moves(fighter).map do |m|
       { round: m.round, attack_height: m.attack_height, attack_style: m.attack_style, block_height: m.block_height }
     end
+  end
+
+  # Whether this fight's XP delta crossed a belt boundary for one side, for the
+  # outcome banner's promotion/demotion callout. Derived from the SNAPSHOT belt +
+  # XP + delta so it's self-contained and replay-stable (exact in the common case
+  # where no other fight settled between challenge and resolution).
+  #
+  # @return [Hash, nil] { direction:, from_belt:, to_belt:, to_belt_name: } or nil
+  def belt_change_for(snapshot_belt, snapshot_xp, delta)
+    return nil if delta.nil?
+
+    after = Belt.settle(current_belt: snapshot_belt, xp: snapshot_xp + delta)
+    return nil if after == snapshot_belt
+
+    {
+      direction: after > snapshot_belt ? "promotion" : "demotion",
+      from_belt: snapshot_belt,
+      to_belt: after,
+      to_belt_name: Belt.name_for(after)
+    }
   end
 
   def fighter_summary(fighter, belt:)

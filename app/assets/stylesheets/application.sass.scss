@@ -412,6 +412,156 @@ a {
   }
 }
 
+// -- Scouting tendency tables ------------------------------------------------
+
+.tendency-note { color: var(--kfm-ink-soft); margin-bottom: 0.75rem; }
+
+.tendency-h {
+  margin: 1rem 0 0.4rem;
+  font-family: var(--kfm-font-display);
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--kfm-ink);
+}
+
+.tendency-table {
+  td { vertical-align: middle; }
+
+  .tendency-split { font-weight: bold; white-space: nowrap; }
+}
+
+// A static horizontal bar meter (no animation): a filled track behind the label.
+.meter {
+  position: relative;
+  min-width: 3.5rem;
+  height: 1.15rem;
+  background: rgba(0, 0, 0, 0.06);
+  border: 1px solid var(--kfm-ink-soft);
+}
+
+.meter__fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  height: 100%;
+  background: var(--kfm-belt-green);
+  opacity: 0.7;
+}
+
+.meter__label {
+  position: relative;
+  display: block;
+  text-align: center;
+  font-size: 0.72rem;
+  font-weight: bold;
+  line-height: 1.15rem;
+  color: var(--kfm-ink);
+}
+
+// -- Recent-form strip -------------------------------------------------------
+
+.form-strip {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin: 0.4rem 0 0.2rem;
+}
+
+.form-strip__label {
+  font-size: 0.7rem;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--kfm-ink-soft);
+  margin-right: 0.25rem;
+}
+
+.form-box {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.4rem;
+  height: 1.4rem;
+  padding: 0 0.2rem;
+  border: 2px solid var(--kfm-border);
+  font-family: var(--kfm-font-display);
+  font-weight: bold;
+  font-size: 0.8rem;
+  color: var(--kfm-parchment);
+}
+
+.form-box--w { background: var(--kfm-belt-green); }
+.form-box--l { background: var(--kfm-belt-red); }
+.form-box--d { background: var(--kfm-ink-soft); }
+
+.form-box__ko {
+  font-size: 0.6rem;
+  vertical-align: super;
+  margin-left: 1px;
+}
+
+.streak-callout {
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--kfm-accent);
+}
+
+// -- Leaderboard -------------------------------------------------------------
+
+.rank-cell {
+  font-family: var(--kfm-font-display);
+  font-weight: bold;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.leaderboard-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+@media (max-width: 800px) {
+  .leaderboard-grid { grid-template-columns: 1fr; }
+}
+
+// -- Footer badges -----------------------------------------------------------
+
+.kfm-footer__badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: center;
+  margin-top: 0.6rem;
+}
+
+// A classic 88x31 web-1.0 button, pure CSS/text — no image.
+.badge-88 {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 88px;
+  height: 31px;
+  padding: 0 4px;
+  border: 2px outset var(--kfm-tatami);
+  background: var(--kfm-ink);
+  color: var(--kfm-belt-yellow);
+  font-family: var(--kfm-font-display);
+  font-size: 0.55rem;
+  font-weight: bold;
+  line-height: 1.05;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.badge-88--alt { background: var(--kfm-belt-red); color: var(--kfm-parchment); }
+
+.kfm-footer__count { font-variant-numeric: tabular-nums; }
+
 // -- Responsive --------------------------------------------------------------
 
 @media (max-width: 600px) {
