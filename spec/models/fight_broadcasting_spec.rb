@@ -73,6 +73,20 @@ RSpec.describe "Fight broadcasting", type: :model do
       expect(to_challenger[:event]).to eq("challenge_resolved")
       expect(to_challenger.dig(:fight, :id)).to eq(fight.id)
     end
+
+    it "announces a promotion to the dojo when the winner belts up" do
+      near_promo = create(:fighter, belt: 1, xp: 290) # White → Yellow at 300
+      low = create(:fighter, belt: 1, xp: 0)
+      fight = Fight.create_challenge!(challenger: near_promo, opponent: low, moves: moves(3, 0, 1))
+      @broadcasts.clear
+
+      fight.respond!(moves: moves(1, 1, 2), rng: Random.new(1))
+
+      belt_change = messages_for(DojoChannel::STREAM).find { |m| m[:event] == "belt_change" }
+      expect(belt_change).to be_present
+      expect(belt_change[:direction]).to eq("promotion")
+      expect(belt_change.dig(:fighter, :id)).to eq(near_promo.id)
+    end
   end
 
   describe "declining a challenge" do

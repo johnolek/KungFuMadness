@@ -11,9 +11,19 @@ class Fighter < ApplicationRecord
   validates :belt, numericality: { greater_than_or_equal_to: 0 }
   validates :user_id, uniqueness: true, allow_nil: true
 
+  # How recently last_seen_at must have been stamped for a fighter to count as
+  # "online". The DojoChannel ping loop and the bot tick both refresh within this
+  # window; it's the single source of truth for presence.
+  ONLINE_WINDOW = 2.minutes
+
   scope :bots, -> { where(bot: true) }
   scope :humans, -> { where(bot: false) }
-  scope :online, ->(within: 2.minutes) { where(last_seen_at: within.ago..) }
+  scope :online, ->(within: ONLINE_WINDOW) { where(last_seen_at: within.ago..) }
+
+  # Any settled belt change — through a fight, through rust decay — announces
+  # itself to the dojo ticker on commit, so promotions and demotions read the same
+  # wherever they come from. On commit so a rolled-back settlement stays silent.
+  after_update_commit :broadcast_belt_change, if: :saved_change_to_belt?
   # Leaderboard order: strongest belt first, then XP within the belt.
   scope :ranked, -> { order(belt: :desc, xp: :desc, name: :asc) }
 
@@ -34,6 +44,11 @@ class Fighter < ApplicationRecord
   # @return [Boolean] whether the fighter is currently in the sub-white Tofu belt
   def tofu?
     belt.zero?
+  end
+
+  # @return [Boolean] whether the fighter was seen inside the online window
+  def online?
+    last_seen_at.present? && last_seen_at >= ONLINE_WINDOW.ago
   end
 
   # @return [String] compact win-loss-draw record, e.g. "12-4-1"
@@ -77,5 +92,12 @@ class Fighter < ApplicationRecord
       bot: bot,
       url: Rails.application.routes.url_helpers.fighter_path(self)
     }
+  end
+
+  private
+
+  def broadcast_belt_change
+    from, _to = saved_change_to_belt
+    DojoChannel.broadcast_belt_change(self, from: from)
   end
 end

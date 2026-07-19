@@ -1,16 +1,13 @@
 module Bots
-  # Resolves a single pending challenge aimed at a bot. The bot accepts and
-  # commits moves via its {Brain}, unless the challenger has been farming it
-  # (>= FARM_LIMIT fights in the last 24h), in which case it declines.
+  # Resolves a single pending challenge aimed at a bot — the DEV immediate-response
+  # path, so a challenge issued from the browser settles in a few seconds without a
+  # running scheduler. Production cadence is {TickJob}. The bot accepts and commits
+  # moves via its {Brain}, unless its {Persona} declines (temperament / farming).
   #
   # No-ops cleanly if the fight vanished, already resolved, or the opponent isn't
   # actually a bot — so it's safe to enqueue speculatively and to retry.
   class RespondJob < ApplicationJob
     queue_as :default
-
-    # Fights between the same pair within 24h that trip a bot's decline.
-    FARM_LIMIT = 4
-    FARM_WINDOW = 24.hours
 
     # @param fight_id [Integer]
     def perform(fight_id)
@@ -22,21 +19,14 @@ module Bots
       # response actually represents (drives the online list in dev).
       fight.opponent.touch(:last_seen_at)
 
-      if farming?(fight)
+      persona = Persona.for(fight.opponent)
+      if persona.decline?(my_belt: fight.opponent_belt, challenger_belt: fight.challenger_belt,
+                          farming: fight.farmed_by_challenger?, rng: Random.new)
         fight.decline!
       else
         moves = Brain.moves_for(fighter: fight.opponent, opponent: fight.challenger)
         fight.respond!(moves: moves)
       end
-    end
-
-    private
-
-    def farming?(fight)
-      Fight.between(fight.challenger, fight.opponent)
-           .where(created_at: FARM_WINDOW.ago..)
-           .where.not(id: fight.id)
-           .count >= FARM_LIMIT
     end
   end
 end

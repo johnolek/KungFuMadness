@@ -4,8 +4,13 @@ class Fight < ApplicationRecord
   CHALLENGE_COOLDOWN = 5.minutes
 
   # How long a pending challenge waits for a response before it lazily expires
-  # when next touched (a daily sweep job arrives in Phase 4).
+  # when next touched, or a daily sweep flips it (see ExpireChallengesJob).
   CHALLENGE_TTL = 7.days
+
+  # A bot treats a challenger as "farming" it once this many fights between the
+  # pair land inside FARM_WINDOW — the signal a temperamental bot declines on.
+  FARM_LIMIT = 4
+  FARM_WINDOW = 24.hours
 
   belongs_to :challenger, class_name: "Fighter"
   belongs_to :opponent, class_name: "Fighter"
@@ -195,6 +200,18 @@ class Fight < ApplicationRecord
     pending? && expires_at.present? && expires_at <= Time.current
   end
 
+  # Whether the challenger has been grinding this exact opponent — {FARM_LIMIT}+
+  # fights between the pair inside {FARM_WINDOW}, this pending one excluded. The
+  # cue a temperamental bot declines on.
+  #
+  # @return [Boolean]
+  def farmed_by_challenger?
+    self.class.between(challenger, opponent)
+        .where(created_at: FARM_WINDOW.ago..)
+        .where.not(id: id)
+        .count >= FARM_LIMIT
+  end
+
   # Compact resolved-fight line for the dojo ticker / recent-fights sidebar. Both
   # sides' name + snapshot belt, who won (nil = draw), whether it was a KO, and a
   # link to the playback. Shared by the initial server render and the live
@@ -252,6 +269,8 @@ class Fight < ApplicationRecord
       FighterChannel.broadcast_to(challenger, event: "challenge_resolved", fight: ticker_payload)
     elsif declined?
       FighterChannel.broadcast_to(challenger, event: "challenge_declined", fight: challenge_card_payload)
+    elsif expired?
+      FighterChannel.broadcast_to(challenger, event: "challenge_expired", fight: challenge_card_payload)
     end
   end
 

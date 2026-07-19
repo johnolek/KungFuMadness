@@ -43,4 +43,23 @@ class DojoChannel < ApplicationCable::Channel
   def self.broadcast_presence(fighter, online:)
     broadcast_event(event: "presence", online: online, fighter: fighter.presence_payload)
   end
+
+  # A belt change ticker line: "<name> reached Yellow belt" (promotion) or "<name>
+  # fell to White belt" (demotion). Fired from any path that settles a belt — a
+  # resolved fight, rust decay — so the dojo sees the whole ladder shift, not just
+  # who beat whom.
+  #
+  # @param fighter [Fighter] already at its new belt
+  # @param from [Integer] the belt index the fighter held before
+  def self.broadcast_belt_change(fighter, from:)
+    return if fighter.belt == from
+
+    broadcast_event(
+      event: "belt_change",
+      direction: fighter.belt > from ? "promotion" : "demotion",
+      fighter: fighter.presence_payload,
+      from_belt: from,
+      from_belt_name: Belt.name_for(from)
+    )
+  end
 end

@@ -23,9 +23,19 @@
   $effect(() => {
     const handler = (event) => {
       const message = event.detail
-      if (message?.event !== "fight_resolved" || !message.fight) return
-      if (fights.some((f) => f.id === message.fight.id)) return
-      fights = [message.fight, ...fights].slice(0, CAP)
+      if (message?.event === "fight_resolved" && message.fight) {
+        if (fights.some((f) => f.id === message.fight.id)) return
+        fights = [message.fight, ...fights].slice(0, CAP)
+      } else if (message?.event === "belt_change" && message.fighter) {
+        const entry = {
+          id: `belt-${message.fighter.id}-${Date.now()}`,
+          kind: "belt_change",
+          direction: message.direction,
+          fighter: message.fighter,
+          from_belt_name: message.from_belt_name
+        }
+        fights = [entry, ...fights].slice(0, CAP)
+      }
     }
     document.addEventListener("kfm:dojo", handler)
     return () => document.removeEventListener("kfm:dojo", handler)
@@ -44,6 +54,21 @@
   {:else}
     <ul class="feed">
       {#each fights as fight (fight.id)}
+        {#if fight.kind === "belt_change"}
+          <li class="feed__row feed__row--belt feed__row--{fight.direction}">
+            <a class="feed__link" href={fight.fighter.url}>
+              <span class="feed__belt">
+                <span class="chip" style={beltChipStyle(fight.fighter.belt)}>{fight.fighter.belt_name}</span>
+                <strong>{fight.fighter.display_name}</strong>
+                {#if fight.direction === "promotion"}
+                  reached {fight.fighter.belt_name} belt
+                {:else}
+                  fell to {fight.fighter.belt_name} belt
+                {/if}
+              </span>
+            </a>
+          </li>
+        {:else}
         {@const s = sides(fight)}
         <li class="feed__row" class:feed__row--draw={s === null}>
           <a class="feed__link" href={fight.url}>
@@ -66,6 +91,7 @@
             </span>
           </a>
         </li>
+        {/if}
       {/each}
     </ul>
   {/if}
@@ -128,4 +154,19 @@
   .badge--draw { background: var(--kfm-tatami); color: var(--kfm-ink); }
 
   .feed__time { color: var(--kfm-ink-soft); font-size: 0.7rem; }
+
+  .feed__row--belt { border-left: 3px solid var(--kfm-belt-yellow); }
+  .feed__row--belt .feed__link { padding-left: 0.4rem; font-style: italic; }
+  .feed__row--promotion { border-left-color: var(--kfm-belt-green); }
+  .feed__row--demotion { border-left-color: var(--kfm-belt-red); }
+  .feed__belt .chip {
+    display: inline-block;
+    padding: 0 0.3rem;
+    border: 1px solid var(--kfm-border);
+    font-size: 0.65rem;
+    font-weight: bold;
+    text-transform: uppercase;
+    vertical-align: middle;
+    margin-right: 0.2rem;
+  }
 </style>

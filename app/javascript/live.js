@@ -53,6 +53,9 @@ function relayFighterToast(message) {
   } else if (message.event === "challenge_declined") {
     const name = fight?.opponent?.display_name ?? "Your opponent"
     toast("info", `${name} declined your challenge.`)
+  } else if (message.event === "challenge_expired") {
+    const name = fight?.opponent?.display_name ?? "your opponent"
+    toast("info", `Your challenge to ${name} expired.`)
   }
 }
 

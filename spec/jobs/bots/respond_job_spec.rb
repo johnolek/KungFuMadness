@@ -24,9 +24,10 @@ RSpec.describe Bots::RespondJob, type: :job do
 
   it "declines when the challenger has been farming the bot" do
     human = create(:fighter)
-    bot = create(:fighter, :bot, strategy: { "type" => "biased" })
+    # A proud bot always refuses a farmer, so the decline is deterministic.
+    bot = create(:fighter, :bot, strategy: { "type" => "biased", "persona" => { "decline_style" => "proud" } })
 
-    described_class::FARM_LIMIT.times do
+    Fight::FARM_LIMIT.times do
       f = challenge(challenger: human, opponent: bot)
       f.update_columns(status: Fight.statuses[:resolved], created_at: 1.hour.ago)
     end

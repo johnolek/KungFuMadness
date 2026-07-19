@@ -210,8 +210,10 @@ class ChallengesController < ApplicationController
   end
 
   # In dev, resolve bot challenges shortly after they're issued so the loop feels
-  # alive without a running scheduler. Recurring bot ticks arrive in Phase 4.
+  # alive without a running scheduler. Off in production, where Bots::TickJob is
+  # the real cadence — bots answer only while "online" (config.x.bots.immediate_response).
   def enqueue_bot_response(fight)
+    return unless Rails.application.config.x.bots.immediate_response
     return unless fight.opponent.bot?
 
     Bots::RespondJob.set(wait: rand(2..8).seconds).perform_later(fight.id)

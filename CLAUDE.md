@@ -55,6 +55,72 @@ to each subscription via `PushSubscription#deliver`, which prunes gone (404/410)
 subscriptions. The service worker's `push` / `notificationclick` handlers show
 the notification and focus/open the dojo. iOS requires add-to-home-screen.
 
+## Bot ecology (the living population)
+
+~200 bots behave like real people through a per-minute decision tick. They are
+seeded by `Bots::Roster.generate` (a deterministic population pyramid of
+kung-fu-movie names across belts 0–17, brains scaling with belt, personas with
+spread-out activity windows) and persisted idempotently by `db/seeds.rb`.
+PepsiDad stays the lone 9th dan.
+
+**Personas** (`Bots::Persona`) interpret the `persona` section of a bot's
+`strategy` jsonb — pure policy, no state, RNG-injectable:
+
+- `activity` — UTC hour ranges the bot tends to be online (windows may wrap
+  midnight); `active_now?` reads the hour in UTC.
+- `session_chance` — P(log in) per active-hour tick while offline.
+- `session_minutes` — session-length band; sets per-tick logout odds so sessions
+  are geometric with that mean.
+- `aggression` — P(issue a challenge) per online tick.
+- `decline_style` — `meek` (ducks 3+ belts up + farmers), `proud` (snubs 3+ belts
+  down + all farmers), `grudging` (only sometimes declines outright farming).
+- `response_delay_minutes` — how long a challenge sits before an answer (coin-flip
+  inside the band so responses spread out).
+
+**The tick** (`Bots::TickJob`, every minute via `config/recurring.yml`) is fully
+driven by an injectable `now`/`rng`, so the sim and specs replay it anywhere on
+the timeline. Each tick, in order: (1) **presence** — offline bots in an active
+hour may start a session (stamp `last_seen_at`, broadcast online via the same
+`DojoChannel` path humans use); online bots may end one (go stale, broadcast
+offline). (2) **respond** — online bots answer pending challenges older than their
+delay, accepting via `Bots::Brain` or declining per temperament. (3) **challenge**
+— per aggression, an online bot picks an online-ish fighter within ±2 belts and
+challenges it, respecting the 5-min pair cooldown, the single-outstanding rule,
+and a cap of 2 pendings stacked on any one human. Batched queries throughout (no
+N+1 over 200 bots). Most bots most ticks do nothing.
+
+Persona math with defaults (session_chance ≈ 0.04, mean session ≈ 30 min →
+logout ≈ 0.033/tick, aggression ≈ 0.02): among bots whose activity window covers
+the current hour, steady-state online fraction ≈ 0.04/(0.04+0.033) ≈ 0.55. With
+~1/3 of the roster active in a given hour, ~36 of 200 are online; at aggression
+0.02 that's ~0.7 challenges/minute initiated, roughly half of which clear
+matchmaking — so the dojo settles a fight every few minutes, not a flood.
+
+**Dev vs production cadence.** In production the tick is the only cadence: bots
+answer only while online. In dev, `config.x.bots.immediate_response = true` also
+enqueues `Bots::RespondJob` a few seconds after a human issues a challenge, so the
+loop feels alive without a running scheduler. Run ticks manually with
+`bin/rails bots:tick`; run the whole recurring set in dev with
+`SOLID_QUEUE_IN_PUMA=1 bin/dev`.
+
+**Progression risk (live).** Demotion hysteresis and the Tofu belt fire through
+real `Fight#resolve!`. `RustDecayJob` (daily) bleeds 1%/day off idle fighters
+above the blue floor (14+ days without a resolved fight), never past Blue.
+`ExpireChallengesJob` (daily) flips pending challenges past `expires_at` to
+expired and toasts the challenger. Any settled belt change — fight or rust —
+broadcasts a `belt_change` promotion/demotion line to the dojo ticker via
+`Fighter`'s own commit callback.
+
+**Ecology sim (the balance authority).** `bin/rails balance:ecology` runs the same
+tick loop in memory against `Bots::Roster` fighters — seeded RNG, no DB / jobs /
+cable, fights resolve straight through `FightResolver` + `Xp::Rules` — until N
+fights settle (`N=`, `BOTS=`, `SEED=` to tune), then reports belt distribution
+before/after, per-tier XP percentiles, promotion/demotion churn, and the Tofu
+population. The `Ecology` spec asserts the population doesn't collapse (no belt
+>40%, both promotions and demotions occur, Tofu <10%, belts 1–9 inhabited) at a
+small seeded scale. Pairs with `balance:simulate` (combat win-rate envelope) as
+the two tuning authorities.
+
 ## Islands convention
 
 Rails owns routes and rendering (Turbo). Interactivity is Svelte 5 islands:

@@ -270,4 +270,55 @@ RSpec.describe Fight, type: :model do
       expect(payload[:rounds].size).to eq(3)
     end
   end
+
+  # The full risk loop, exercised through real Fight#resolve! rather than the Belt
+  # unit tests: a loss actually demotes, a hard loss drops a white belt into Tofu,
+  # and a Tofu win escapes straight back to White.
+  describe "progression risk (integration through resolve!)" do
+    def winning_challenger_moves
+      (1..3).map { |r| { round: r, attack_height: 3, attack_style: 0, block_height: 1 } }
+    end
+
+    def losing_opponent_moves
+      (1..3).map { |r| { round: r, attack_height: 1, attack_style: 1, block_height: 2 } }
+    end
+
+    it "demotes the loser a belt when the loss drops XP past the hysteresis band" do
+      winner = create(:fighter, belt: 1, xp: 0)
+      # Yellow at exactly its threshold; a −90 loss to a white belt drops it below
+      # the demotion band (300 − 20%·300 = 240) and back to White.
+      loser = create(:fighter, belt: 2, xp: 300)
+      fight = Fight.create_challenge!(challenger: winner, opponent: loser, moves: winning_challenger_moves)
+
+      fight.respond!(moves: losing_opponent_moves, rng: Random.new(1))
+
+      expect(loser.reload.xp).to eq(210)
+      expect(loser.belt).to eq(1)
+    end
+
+    it "drops a white belt into Tofu on a loss that takes XP negative" do
+      winner = create(:fighter, belt: 1, xp: 0)
+      loser = create(:fighter, belt: 1, xp: 40) # −50 same-belt loss → −10
+      fight = Fight.create_challenge!(challenger: winner, opponent: loser, moves: winning_challenger_moves)
+
+      fight.respond!(moves: losing_opponent_moves, rng: Random.new(1))
+
+      expect(loser.reload.xp).to eq(-10)
+      expect(loser.belt).to eq(0)
+      expect(loser).to be_tofu
+    end
+
+    it "escapes Tofu straight to White on the next win" do
+      escapee = create(:fighter, belt: 0, xp: -10)
+      foil = create(:fighter, belt: 1, xp: 0)
+      # Escapee wins as the challenger (belt-0 snapshot): a +150 win lifts XP to ≥0.
+      fight = Fight.create_challenge!(challenger: escapee, opponent: foil, moves: winning_challenger_moves)
+
+      fight.respond!(moves: losing_opponent_moves, rng: Random.new(1))
+
+      expect(escapee.reload.xp).to be >= 0
+      expect(escapee.belt).to eq(1)
+      expect(escapee).not_to be_tofu
+    end
+  end
 end
