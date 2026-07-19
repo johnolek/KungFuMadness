@@ -10,8 +10,7 @@
       <% @fighters.each do |fighter| %>
         <tr>
           <td>
-            <%= link_to fighter.name, fighter_path(fighter) %>
-            <%= " 🤖" if fighter.bot %>
+            <%= link_to fighter_display_name(fighter), fighter_path(fighter) %>
           </td>
           <td><%= belt_chip(fighter.belt) %></td>
           <td><%= fighter.xp %></td>

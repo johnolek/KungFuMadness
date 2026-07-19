@@ -19,7 +19,7 @@
           <div class="challenge-row">
             <span>
               <%= belt_chip(fight.challenger_belt) %>
-              <%= link_to fight.challenger.name, fighter_path(fight.challenger) %>
+              <%= link_to fighter_display_name(fight.challenger), fighter_path(fight.challenger) %>
             </span>
             <%= link_to "Respond", challenge_path(fight), class: "btn-kfm" %>
           </div>
@@ -36,7 +36,7 @@
           <div class="challenge-row">
             <span>
               <%= belt_chip(fight.opponent_belt) %>
-              <%= link_to fight.opponent.name, fighter_path(fight.opponent) %>
+              <%= link_to fighter_display_name(fight.opponent), fighter_path(fight.opponent) %>
             </span>
             <span class="result-draw">Awaiting reply…</span>
           </div>
@@ -57,14 +57,14 @@
         <tbody>
           <% @recent_fights.each do |fight| %>
             <tr>
-              <td><%= link_to fight.challenger.name, fighter_path(fight.challenger) %></td>
-              <td><%= link_to fight.opponent.name, fighter_path(fight.opponent) %></td>
+              <td><%= link_to fighter_display_name(fight.challenger), fighter_path(fight.challenger) %></td>
+              <td><%= link_to fighter_display_name(fight.opponent), fighter_path(fight.opponent) %></td>
               <td>
                 <%= link_to fight_path(fight) do %>
                   <% if fight.winner_id.nil? %>
                     Draw<%= " (KO)" if fight.ko %>
                   <% else %>
-                    <%= fight.winner.name %> won<%= " by KO" if fight.ko %>
+                    <%= fighter_display_name(fight.winner) %> won<%= " by KO" if fight.ko %>
                   <% end %>
                 <% end %>
               </td>

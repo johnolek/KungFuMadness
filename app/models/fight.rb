@@ -280,6 +280,7 @@ class Fight < ApplicationRecord
     {
       id: fighter.id,
       name: fighter.name,
+      display_name: fighter.display_name,
       belt: belt,
       belt_name: Belt.name_for(belt),
       bot: fighter.bot,

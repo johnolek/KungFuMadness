@@ -176,6 +176,27 @@ a {
   &:active {
     border-style: inset;
   }
+
+  &.is-disabled {
+    opacity: 0.4;
+    cursor: default;
+    pointer-events: none;
+  }
+}
+
+// -- Match-history pagination ------------------------------------------------
+
+.page-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+.page-nav__label {
+  font-size: 0.9rem;
+  color: var(--kfm-ink-soft);
 }
 
 // -- Stat tables -------------------------------------------------------------
@@ -255,6 +276,15 @@ a {
 .xp-up::before { content: "+"; }
 .xp-up { color: var(--kfm-belt-green); }
 .xp-down { color: var(--kfm-belt-red); }
+
+// Subtle marker distinguishing bot fighters from humans, in place of an emoji.
+.bot-tag {
+  font-size: 0.7em;
+  font-weight: bold;
+  letter-spacing: 0.05em;
+  color: var(--kfm-ink-soft);
+  vertical-align: middle;
+}
 
 // -- Dojo two-column layout --------------------------------------------------
 

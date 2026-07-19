@@ -1,0 +1,13 @@
+<%# Compact pre-commit scouting panel. Locals: scout (the fighter being sized up),
+    recent_fights (their most recent resolved fights). Read their patterns here,
+    then open individual fights or their full profile before committing. %>
+<div class="panel-kfm">
+  <div class="panel-kfm-title">Scouting: <%= fighter_display_name(scout) %></div>
+  <% if recent_fights.any? %>
+    <%= render "fights/history_table", fighter: scout, fights: recent_fights %>
+    <p class="stat-line"><%= link_to "Full history →", fighter_path(scout) %></p>
+  <% else %>
+    <p>No fights on record yet — you're stepping into the unknown.
+       <%= link_to "Full history →", fighter_path(scout) %></p>
+  <% end %>
+</div>

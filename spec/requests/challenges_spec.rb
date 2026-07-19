@@ -25,6 +25,17 @@ RSpec.describe "Challenges", type: :request do
       get new_challenge_path(opponent: me.id)
       expect(response).to redirect_to(fighters_path)
     end
+
+    it "surfaces a scouting panel of the opponent's recent resolved fights" do
+      prey = create(:fighter, name: "Old Foe", belt: 2)
+      create(:fight, :resolved, challenger: opponent, opponent: prey, resolved_at: 1.hour.ago)
+
+      get new_challenge_path(opponent: opponent.id)
+
+      expect(response.body).to include("Scouting")
+      expect(response.body).to include("Old Foe")
+      expect(response.body).to include("Full history")
+    end
   end
 
   describe "POST /challenges" do
@@ -71,12 +82,20 @@ RSpec.describe "Challenges", type: :request do
 
     it "shows the opponent the respond page without any challenger move data" do
       opponent; sign_in_as(opponent_user)
+      # A prior resolved fight for the challenger — the scouting panel surfaces it,
+      # which is public history and must not be confused with the sealed challenge.
+      create(:fight, :resolved, challenger: me, opponent: create(:fighter, name: "Past Rival"),
+             resolved_at: 2.hours.ago)
       get challenge_path(fight)
 
       expect(response).to have_http_status(:ok)
       expect(response.body).to include('data-svelte-component="MoveCommitter"')
-      # No serialized move data leaks: the payload keys never appear, nor does the
-      # FightPlayback island (which is the only thing that carries movesets).
+      # The scouting surface is present (the challenger's public history)...
+      expect(response.body).to include("Scouting")
+      expect(response.body).to include("Past Rival")
+      # ...but no serialized move data for THIS sealed challenge leaks: the payload
+      # keys never appear, nor does the FightPlayback island (the only thing that
+      # carries movesets).
       expect(response.body).not_to include("attack_height")
       expect(response.body).not_to include("block_height")
       expect(response.body).not_to include("FightPlayback")

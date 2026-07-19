@@ -22,6 +22,15 @@ class Fighter < ApplicationRecord
     Belt.name_for(belt)
   end
 
+  # Plain-text display name — bots carry a "[BOT]" suffix so they read as bots
+  # wherever HTML styling isn't available (Svelte props, payloads, page titles).
+  # HTML views should prefer the +fighter_display_name+ helper, which dims the tag.
+  #
+  # @return [String]
+  def display_name
+    bot? ? "#{name} [BOT]" : name
+  end
+
   # @return [Boolean] whether the fighter is currently in the sub-white Tofu belt
   def tofu?
     belt.zero?

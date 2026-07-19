@@ -1,6 +1,9 @@
 class ChallengesController < ApplicationController
   before_action :require_verified_fighter
 
+  # How many of an opponent's recent fights the scouting panel surfaces.
+  SCOUT_FIGHTS = 8
+
   # Pick moves against a chosen opponent. ?opponent=ID selects the target.
   def new
     @opponent = Fighter.find(params[:opponent])
@@ -8,6 +11,8 @@ class ChallengesController < ApplicationController
       redirect_to fighters_path, alert: "You can't challenge yourself." and return
     end
     @fighter = current_fighter
+    @scout = @opponent
+    @recent_fights = scout_fights(@opponent)
   end
 
   # Commit the challenger's three rounds and seal the challenge.
@@ -39,6 +44,12 @@ class ChallengesController < ApplicationController
 
     @viewer_role = viewer_role_for(@fight)
     redirect_to root_path, alert: "That challenge isn't yours to answer." and return if @viewer_role == :stranger
+
+    # Scout the other party: the responder sizes up the challenger, the waiting
+    # challenger sizes up the opponent. Only ever their public resolved history —
+    # never the sealed moves of THIS pending fight.
+    @scout = @viewer_role == :opponent ? @fight.challenger : @fight.opponent
+    @recent_fights = scout_fights(@scout)
   end
 
   # Opponent accepts: commit moves, resolve, go watch it.
@@ -72,6 +83,11 @@ class ChallengesController < ApplicationController
   end
 
   private
+
+  # A fighter's most recent resolved fights for the scouting panel.
+  def scout_fights(fighter)
+    fighter.resolved_fights.includes(:challenger, :opponent).limit(SCOUT_FIGHTS)
+  end
 
   def viewer_role_for(fight)
     return :opponent if fight.opponent == current_fighter

@@ -1,7 +1,7 @@
 <% content_for :title, "Challenge #{@opponent.name} — Kung Fu Madness" %>
 
 <div class="panel-kfm">
-  <div class="panel-kfm-title">Challenge <%= @opponent.name %></div>
+  <div class="panel-kfm-title">Challenge <%= fighter_display_name(@opponent) %></div>
   <div class="fighter-head">
     <div class="fighter-head__avatar">
       <div class="belt-rect" style="background: <%= belt_var(@opponent.belt) %>;"
@@ -10,7 +10,6 @@
     <div class="fighter-head__meta">
       <p class="stat-line"><%= belt_chip(@opponent.belt) %> &middot; <%= @opponent.xp %> XP</p>
       <p class="stat-line">Record: <%= @opponent.record %> (W-L-D)</p>
-      <p class="stat-line"><%= link_to "Scout their history →", fighter_path(@opponent) %></p>
     </div>
   </div>
   <p>Commit all three rounds. Your opponent answers blind — they never see these
@@ -27,3 +26,6 @@
     }.to_json %>"
   ></div>
 </div>
+
+<%= render "challenges/scouting", scout: @scout, recent_fights: @recent_fights %>
+

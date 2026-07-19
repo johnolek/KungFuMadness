@@ -38,7 +38,7 @@
     {#each [fight.challenger, fight.opponent] as fighter}
       <div class="corner">
         <div class="corner__rect" style="background: {beltColor(fighter.belt)};"></div>
-        <div class="corner__name">{fighter.name}{fighter.bot ? " 🤖" : ""}</div>
+        <div class="corner__name">{fighter.display_name}</div>
         <div class="corner__belt">{fighter.belt_name} belt</div>
         <div class="corner__record">{fighter.record.wins}-{fighter.record.losses}-{fighter.record.draws}</div>
       </div>

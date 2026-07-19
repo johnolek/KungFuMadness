@@ -1,7 +1,7 @@
 <% content_for :title, "#{@fighter.name} — Kung Fu Madness" %>
 
 <div class="panel-kfm">
-  <div class="panel-kfm-title"><%= @fighter.name %><%= " 🤖" if @fighter.bot %></div>
+  <div class="panel-kfm-title"><%= fighter_display_name(@fighter) %></div>
   <div class="fighter-head">
     <div class="fighter-head__avatar">
       <div class="belt-rect" style="background: <%= belt_var(@fighter.belt) %>;"
@@ -25,40 +25,21 @@
 <div class="panel-kfm">
   <div class="panel-kfm-title">Match history</div>
   <% if @history.any? %>
-    <table class="stat-table">
-      <thead>
-        <tr><th>Opponent</th><th>Their belt</th><th>Result</th><th>XP</th><th>When</th></tr>
-      </thead>
-      <tbody>
-        <% @history.each do |fight| %>
-          <% as_challenger = fight.challenger_id == @fighter.id %>
-          <% other = as_challenger ? fight.opponent : fight.challenger %>
-          <% other_belt = as_challenger ? fight.opponent_belt : fight.challenger_belt %>
-          <% my_delta = as_challenger ? fight.challenger_xp_delta : fight.opponent_xp_delta %>
-          <tr>
-            <td><%= link_to other.name, fighter_path(other) %></td>
-            <td><%= belt_chip(other_belt) %></td>
-            <td>
-              <%= link_to fight_path(fight) do %>
-                <% if fight.winner_id.nil? %>
-                  <span class="result-draw">Draw<%= " (KO)" if fight.ko %></span>
-                <% elsif fight.winner_id == @fighter.id %>
-                  <span class="result-win">Win<%= " (KO)" if fight.ko %></span>
-                <% else %>
-                  <span class="result-loss">Loss<%= " (KO)" if fight.ko %></span>
-                <% end %>
-              <% end %>
-            </td>
-            <td>
-              <% if my_delta %>
-                <span class="<%= my_delta >= 0 ? 'xp-up' : 'xp-down' %>"><%= my_delta %></span>
-              <% end %>
-            </td>
-            <td><%= time_ago_in_words(fight.resolved_at) %> ago</td>
-          </tr>
-        <% end %>
-      </tbody>
-    </table>
+    <%= render "fights/history_table", fighter: @fighter, fights: @history, show_xp: true %>
+
+    <div class="page-nav">
+      <% if @page > 1 %>
+        <%= link_to "← Newer", fighter_path(@fighter, page: @page - 1), class: "btn-kfm" %>
+      <% else %>
+        <span class="btn-kfm is-disabled">← Newer</span>
+      <% end %>
+      <span class="page-nav__label">Page <%= @page %> of <%= @total_pages %></span>
+      <% if @page < @total_pages %>
+        <%= link_to "Older →", fighter_path(@fighter, page: @page + 1), class: "btn-kfm" %>
+      <% else %>
+        <span class="btn-kfm is-disabled">Older →</span>
+      <% end %>
+    </div>
   <% else %>
     <p>No fights on record yet.</p>
   <% end %>

@@ -1,0 +1,45 @@
+<%# Resolved-fight table from +fighter+'s perspective — the scouting surface shared
+    by profiles and challenge pages. Locals: fighter (whose history this is), fights
+    (resolved Fight records, newest first), show_xp (adds the XP-delta column). %>
+<table class="stat-table">
+  <thead>
+    <tr>
+      <th>Date</th>
+      <th>Opponent</th>
+      <th>Their belt</th>
+      <th>Result</th>
+      <% if local_assigns[:show_xp] %><th>XP</th><% end %>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    <% fights.each do |fight| %>
+      <% as_challenger = fight.challenger_id == fighter.id %>
+      <% other = as_challenger ? fight.opponent : fight.challenger %>
+      <% other_belt = as_challenger ? fight.opponent_belt : fight.challenger_belt %>
+      <% my_delta = as_challenger ? fight.challenger_xp_delta : fight.opponent_xp_delta %>
+      <tr>
+        <td><%= fight.resolved_at.strftime("%Y-%m-%d") %></td>
+        <td><%= link_to fighter_display_name(other), fighter_path(other) %></td>
+        <td><%= belt_chip(other_belt) %></td>
+        <td>
+          <% if fight.winner_id.nil? %>
+            <span class="result-draw">Draw<%= " (KO)" if fight.ko %></span>
+          <% elsif fight.winner_id == fighter.id %>
+            <span class="result-win">Won<%= " (KO)" if fight.ko %></span>
+          <% else %>
+            <span class="result-loss">Lost<%= " (KO)" if fight.ko %></span>
+          <% end %>
+        </td>
+        <% if local_assigns[:show_xp] %>
+          <td>
+            <% if my_delta %>
+              <span class="<%= my_delta >= 0 ? 'xp-up' : 'xp-down' %>"><%= my_delta %></span>
+            <% end %>
+          </td>
+        <% end %>
+        <td><%= link_to "Watch", fight_path(fight) %></td>
+      </tr>
+    <% end %>
+  </tbody>
+</table>

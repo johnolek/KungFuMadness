@@ -2,14 +2,15 @@
 
 <% if @viewer_role == :challenger %>
   <div class="panel-kfm">
-    <div class="panel-kfm-title">Awaiting <%= @fight.opponent.name %>'s reply</div>
-    <p>Your sealed challenge is out. <%= @fight.opponent.name %> hasn't answered yet —
+    <div class="panel-kfm-title">Awaiting <%= fighter_display_name(@fight.opponent) %>'s reply</div>
+    <p>Your sealed challenge is out. <%= fighter_display_name(@fight.opponent) %> hasn't answered yet —
        they can't see the moves you committed.</p>
-    <p class="stat-line"><%= link_to "Scout your opponent", fighter_path(@fight.opponent) %></p>
   </div>
+
+  <%= render "challenges/scouting", scout: @scout, recent_fights: @recent_fights %>
 <% else %>
   <div class="panel-kfm">
-    <div class="panel-kfm-title"><%= @fight.challenger.name %> challenges you</div>
+    <div class="panel-kfm-title"><%= fighter_display_name(@fight.challenger) %> challenges you</div>
     <div class="fighter-head">
       <div class="fighter-head__avatar">
         <div class="belt-rect" style="background: <%= belt_var(@fight.challenger_belt) %>;"
@@ -18,7 +19,6 @@
       <div class="fighter-head__meta">
         <p class="stat-line"><%= belt_chip(@fight.challenger_belt) %></p>
         <p class="stat-line">Record: <%= @fight.challenger.record %> (W-L-D)</p>
-        <p class="stat-line"><%= link_to "Scout their history →", fighter_path(@fight.challenger) %></p>
       </div>
     </div>
     <p>Answer blind. Commit your three rounds — you won't see their moves until it's
@@ -38,4 +38,6 @@
       <%= button_to "Decline challenge", decline_challenge_path(@fight), method: :post, class: "btn-kfm" %>
     </p>
   </div>
+
+  <%= render "challenges/scouting", scout: @scout, recent_fights: @recent_fights %>
 <% end %>

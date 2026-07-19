@@ -8,6 +8,17 @@ module ApplicationHelper
     { toasts: toasts }
   end
 
+  # A fighter's name for HTML display. Bots get a subtle, dimmed "[BOT]" tag after
+  # the name so they're identifiable everywhere without an emoji.
+  #
+  # @param fighter [Fighter]
+  # @return [ActiveSupport::SafeBuffer]
+  def fighter_display_name(fighter)
+    return h(fighter.name) unless fighter.bot?
+
+    safe_join([ fighter.name, content_tag(:span, "[BOT]", class: "bot-tag") ], " ")
+  end
+
   # A belt-colored name chip. Fills with the index-aligned --belt-N var; light
   # belts get dark text, dark belts get light text for contrast.
   #

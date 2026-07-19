@@ -67,7 +67,14 @@ BOTS = [
   { name: "Grandmaster Oyama", belt: 7,
     strategy: { type: "biased", epsilon: 0.05,
                 attack_weights: { low: 2, mid: 2, high: 3 },
-                block_weights: { low: 2, mid: 2, high: 2 } } }
+                block_weights: { low: 2, mid: 2, high: 2 } } },
+  # Black 9th dan (belt 17). "adaptive" is a later-phase brain that currently
+  # falls back to biased — the weights below are what actually drive it: a low
+  # epsilon and hard-to-read, evenly-spread heights make him a menace to scout.
+  { name: "PepsiDad", belt: 17,
+    strategy: { type: "adaptive", epsilon: 0.05,
+                attack_weights: { low: 3, mid: 4, high: 3 },
+                block_weights: { low: 3, mid: 4, high: 3 } } }
 ].freeze
 
 BOTS.each do |spec|
