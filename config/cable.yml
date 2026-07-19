@@ -1,11 +1,20 @@
+# solid_cable is DB-backed (no Redis). With no `connects_to` it uses the primary
+# database, so a single Postgres serves the app, jobs, and cable broadcasts.
+#
+# Dev must use solid_cable too, not `async`: since `bin/dev` runs Solid Queue in
+# Puma (SOLID_QUEUE_IN_PUMA=1), the bot tick executes in FORKED worker processes.
+# The `async` adapter is in-process only, so broadcasts from a worker would never
+# reach browsers connected to the web process. solid_cable relays through the DB,
+# so a broadcast from any process (worker, `rails runner`, rake) reaches every
+# subscribed browser — exactly what production does.
 development:
-  adapter: async
+  adapter: solid_cable
+  polling_interval: 0.1.seconds
+  message_retention: 1.hour
 
 test:
   adapter: test
 
-# solid_cable is DB-backed (no Redis). With no `connects_to` it uses the primary
-# database, so a single Postgres serves the app, jobs, and cable broadcasts.
 production:
   adapter: solid_cable
   polling_interval: 0.1.seconds

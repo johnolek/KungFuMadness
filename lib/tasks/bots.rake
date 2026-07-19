@@ -2,7 +2,8 @@ namespace :bots do
   desc "Run one bot decision tick now (logins/logouts, responses, challenges). Dev helper for the per-minute recurring job."
   task tick: :environment do
     before = Fight.resolved.count
-    Bots::TickJob.perform_now
+    # Planner + ActJobs inline (no jitter, no enqueue) so a manual poke acts here and now.
+    Bots::TickJob.perform_now(inline: true)
     online = Fighter.bots.online.count
     resolved = Fight.resolved.count - before
     pending = Fight.pending.where(opponent_id: Fighter.bots.select(:id)).count

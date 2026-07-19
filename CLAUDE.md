@@ -13,7 +13,12 @@ depth comes from scouting opponents' public match history.
   and Solid Cable broadcasts (no multi-database `connects_to`).
 - **Solid Queue** (Active Job), **Solid Cable** (Action Cable). Both run on the
   primary DB; their tables are plain migrations in `db/migrate`. Solid Queue
-  runs in-process via the Puma plugin when `SOLID_QUEUE_IN_PUMA` is set.
+  runs in-process via the Puma plugin when `SOLID_QUEUE_IN_PUMA` is set. Cable uses
+  the DB-backed `solid_cable` adapter in BOTH dev and production (not `async`):
+  since jobs run in forked Puma workers, an in-process adapter would strand
+  worker-side broadcasts from the web process. `solid_cable` relays through the DB,
+  so a broadcast from any process reaches every subscribed browser (dev polls at
+  0.1s, 1h retention; prod 0.1s, 1d).
 - **esbuild + esbuild-svelte** bundle **Svelte 5** islands over ERB/Turbo.
   **sass** owns the global retro theme.
 - **RSpec** + factory_bot + faker + shoulda-matchers.
@@ -84,17 +89,35 @@ PepsiDad stays the lone 9th dan.
 - `response_delay_minutes` — how long a challenge sits before an answer (coin-flip
   inside the band so responses spread out).
 
-**The tick** (`Bots::TickJob`, every minute via `config/recurring.yml`) is fully
-driven by an injectable `now`/`rng`, so the sim and specs replay it anywhere on
-the timeline. Each tick, in order: (1) **presence** — offline bots in an active
-hour may start a session (stamp `last_seen_at`, broadcast online via the same
-`DojoChannel` path humans use); online bots may end one (go stale, broadcast
-offline). (2) **respond** — online bots answer pending challenges older than their
-delay, accepting via `Bots::Brain` or declining per temperament. (3) **challenge**
-— per aggression, an online bot picks an online-ish fighter within ±2 belts and
-challenges it, respecting the 5-min pair cooldown, the single-outstanding rule,
-and a cap of 2 pendings stacked on any one human. Batched queries throughout (no
-N+1 over 200 bots). Most bots most ticks do nothing.
+**The tick — planner + jittered actors.** `Bots::TickJob` (every minute via
+`config/recurring.yml`) is a PLANNER, not an actor. Driven by an injectable
+`now`/`rng` (so the sim and specs replay it anywhere on the timeline), it consults
+every bot's persona and decides what each WANTS this minute — (1) **presence**: an
+offline bot in an active hour may want to start a session, an online bot may want
+to end one; (2) **respond**: which pending challenges past the bot's delay are
+ready to answer; (3) **challenge**: per aggression, whether an online bot wants to
+go looking for a fight — then enqueues one `Bots::ActJob.set(wait:
+rand(0..59).seconds).perform_later(bot_id, hints…)` per acting bot. Spreading the
+work is the point: with ~20–40 acting bots a minute the world dribbles continuously
+instead of firing every action at :00, and presence lands at the jittered second
+too so the Online Now sidebar dribbles as well.
+
+`Bots::ActJob` is the actor, run at its jittered second. Because up to a minute has
+passed since the plan, it RE-EVALUATES against current state: it applies the
+presence change only if still warranted (no duplicate online/offline broadcast),
+answers each flagged challenge only if it's still pending (skipping any that
+resolved or expired in the interim), and picks a live challenge target NOW, so the
+±2-belt reach, 5-min pair cooldown, single-outstanding rule, and 2-pending cap on
+any human are all enforced against fresh counts. It leans on the same locked,
+pending-guarded paths (`Fight#respond!`, `#decline!`, `Fight.create_challenge!`),
+so a duplicate or stale ActJob is a clean no-op — no distributed lock needed. The
+durable delay is Solid Queue's, not in-memory scheduling, so the jitter survives
+restarts and works across the forked Puma workers. Only that per-bot wait uses
+`Kernel#rand`; the persona rolls stay on the injectable `rng`. Batched queries in
+the planner (roster + pending challenges load once), so planning stays flat over
+200 bots. Most bots most minutes want nothing and get no job. `bin/rails bots:tick`
+runs the planner with `inline: true`, executing each ActJob in-process immediately
+for manual dev poking.
 
 Persona math with defaults (session_chance ≈ 0.04, mean session ≈ 30 min →
 logout ≈ 0.033/tick, aggression ≈ 0.02): among bots whose activity window covers
@@ -103,15 +126,16 @@ the current hour, steady-state online fraction ≈ 0.04/(0.04+0.033) ≈ 0.55. W
 0.02 that's ~0.7 challenges/minute initiated, roughly half of which clear
 matchmaking — so the dojo settles a fight every few minutes, not a flood.
 
-**Dev vs production cadence.** Dev now runs the tick exactly like production:
-`bin/dev` sets `SOLID_QUEUE_IN_PUMA=1`, dev uses the `:solid_queue` adapter, and
-`config/recurring.yml` schedules `bots_tick` every minute in both environments —
-so the population lives automatically with no running-scheduler caveat. On top of
+**Dev vs production cadence.** Dev runs the tick exactly like production: `bin/dev`
+sets `SOLID_QUEUE_IN_PUMA=1`, dev uses the `:solid_queue` adapter, and
+`config/recurring.yml` schedules `bots_tick` every minute in both environments — so
+the planner fires each minute and the resulting `Bots::ActJob`s execute (in forked
+workers) at their jittered seconds, with no running-scheduler caveat. On top of
 that, dev-only `config.x.bots.immediate_response = true` still enqueues
-`Bots::RespondJob` a few seconds after a human directly challenges a bot, so a
-developer testing the challenge flow gets a fast reply instead of waiting out that
-bot's `response_delay` window (orthogonal to the world cadence; off in prod). Run
-a single tick by hand with `bin/rails bots:tick`.
+`Bots::RespondJob` a few seconds after a human directly challenges a specific bot,
+so a developer testing the challenge flow gets a fast reply instead of waiting out
+that bot's `response_delay` window (orthogonal to the world cadence; off in prod).
+Run a single tick by hand with `bin/rails bots:tick` (planner + inline ActJobs).
 
 **Progression risk (live).** Demotion hysteresis and the Tofu belt fire through
 real `Fight#resolve!`. `RustDecayJob` (daily) bleeds 1%/day off idle fighters

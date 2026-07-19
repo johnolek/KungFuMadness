@@ -1,8 +1,11 @@
 require "rails_helper"
 
+# TickJob is a PLANNER: it decides intent and enqueues a Bots::ActJob per acting
+# bot at a jittered second. It performs no presence/respond/challenge side effects
+# itself — those are asserted against Bots::ActJob. Here we assert the plan: the
+# right intents reach the right bots, waits land inside the minute, and idle bots
+# get no job.
 RSpec.describe Bots::TickJob, type: :job do
-  # A wide-open activity window and a near-certain login so presence is
-  # deterministic; long sessions so an online bot won't randomly log off.
   def persona(overrides = {})
     {
       "activity" => [ [ 10, 12 ] ],
@@ -30,118 +33,98 @@ RSpec.describe Bots::TickJob, type: :job do
     )
   end
 
-  describe "presence" do
-    it "logs an offline bot on during its active hours and announces it" do
+  # The test adapter's queue isn't auto-cleared under RSpec, so wipe it each example.
+  before { ActiveJob::Base.queue_adapter.enqueued_jobs.clear }
+
+  def act_jobs
+    ActiveJob::Base.queue_adapter.enqueued_jobs.select { |j| j[:job] == Bots::ActJob }
+  end
+
+  describe "presence planning" do
+    it "plans a login for an offline bot in its active hours" do
       b = bot(last_seen_at: nil)
 
       expect { described_class.new.perform(now: in_window, rng: seeded) }
-        .to have_broadcasted_to(DojoChannel::STREAM)
-        .with(hash_including(event: "presence", online: true))
-
-      expect(b.reload.last_seen_at).to be_within(2.seconds).of(in_window)
+        .to have_enqueued_job(Bots::ActJob)
+        .with(b.id, presence: "login", respond_fight_ids: [], challenge: false)
     end
 
-    it "logs an online bot off once its window has passed and announces it" do
+    it "plans a logout for an online bot once its window has passed" do
       b = bot(last_seen_at: out_of_window - 30.seconds)
 
       expect { described_class.new.perform(now: out_of_window, rng: seeded) }
-        .to have_broadcasted_to(DojoChannel::STREAM)
-        .with(hash_including(event: "presence", online: false))
-
-      expect(b.reload.online?).to be(false)
+        .to have_enqueued_job(Bots::ActJob)
+        .with(b.id, presence: "logout", respond_fight_ids: [], challenge: false)
     end
 
-    it "leaves an offline bot offline outside its window" do
-      b = bot(last_seen_at: nil)
-      described_class.new.perform(now: out_of_window, rng: seeded)
-      expect(b.reload.last_seen_at).to be_nil
+    it "enqueues nothing for an offline bot outside its window" do
+      bot(last_seen_at: nil, persona_overrides: { "activity" => [ [ 22, 23 ] ] })
+      described_class.new.perform(now: in_window, rng: seeded)
+      expect(act_jobs).to be_empty
     end
   end
 
-  describe "responding to challenges" do
-    it "resolves a pending challenge for an online bot" do
+  describe "jitter" do
+    it "schedules every ActJob at a random second inside the minute" do
+      5.times { bot(last_seen_at: nil) }
+
+      # The wait rides real wall-clock (durable Solid Queue delay), not the injected
+      # sim clock, so bound it against Time.current around the enqueue.
+      t0 = Time.current
+      described_class.new.perform(now: in_window, rng: seeded)
+      ceiling = Time.current.to_f + 59
+
+      expect(act_jobs).not_to be_empty
+      act_jobs.each do |job|
+        expect(job[:at]).to be_between(t0.to_f, ceiling).inclusive
+      end
+    end
+  end
+
+  describe "respond planning" do
+    it "flags a ready pending challenge for an online bot to answer" do
       human = create(:fighter, belt: 3, xp: 800)
       b = bot(belt: 3, xp: 800, last_seen_at: in_window)
       fight = challenge(challenger: human, opponent: b)
       fight.update_column(:created_at, in_window - 2.minutes)
 
-      described_class.new.perform(now: in_window, rng: seeded)
-
-      expect(fight.reload).to be_resolved
-      expect(fight.fight_rounds.count).to eq(3)
-    end
-
-    it "declines a farmed challenge per a proud temperament" do
-      human = create(:fighter, belt: 3)
-      b = bot(belt: 3, last_seen_at: in_window, persona_overrides: { "decline_style" => "proud" })
-
-      Fight::FARM_LIMIT.times do
-        f = challenge(challenger: human, opponent: b)
-        f.update_columns(status: Fight.statuses[:resolved], created_at: 1.hour.ago)
-      end
-      fight = challenge(challenger: human, opponent: b)
-      fight.update_column(:created_at, in_window - 2.minutes)
-
       expect { described_class.new.perform(now: in_window, rng: seeded) }
-        .to change { b.reload.declines }.by(1)
-      expect(fight.reload).to be_declined
+        .to have_enqueued_job(Bots::ActJob)
+        .with(b.id, presence: nil, respond_fight_ids: [ fight.id ], challenge: false)
     end
 
-    it "does not respond for an offline bot" do
+    it "does not flag challenges for an offline bot" do
       human = create(:fighter, belt: 3)
       b = bot(belt: 3, last_seen_at: nil, persona_overrides: { "activity" => [ [ 22, 23 ] ] })
       fight = challenge(challenger: human, opponent: b)
       fight.update_column(:created_at, in_window - 2.minutes)
 
       described_class.new.perform(now: in_window, rng: seeded)
-      expect(fight.reload).to be_pending
+      expect(act_jobs).to be_empty
     end
   end
 
-  describe "issuing challenges" do
-    it "an aggressive online bot challenges an in-range fighter" do
+  describe "challenge planning" do
+    it "flags an aggressive online bot to go looking for a fight" do
       aggressor = bot(belt: 3, last_seen_at: in_window, persona_overrides: { "aggression" => 1.0 })
-      target = bot(belt: 4, last_seen_at: in_window)
 
       expect { described_class.new.perform(now: in_window, rng: seeded) }
-        .to change { Fight.pending.where(challenger: aggressor).count }.by(1)
-
-      expect(Fight.pending.exists?(challenger: aggressor, opponent: target)).to be(true)
+        .to have_enqueued_job(Bots::ActJob)
+        .with(aggressor.id, presence: nil, respond_fight_ids: [], challenge: true)
     end
+  end
 
-    it "won't challenge a fighter more than two belts away" do
-      aggressor = bot(belt: 3, last_seen_at: in_window, persona_overrides: { "aggression" => 1.0 })
-      bot(belt: 8, last_seen_at: in_window) # far out of reach
+  describe "inline mode (bots:tick rake)" do
+    it "acts immediately in-process without enqueuing" do
+      human = create(:fighter, belt: 3, xp: 800)
+      b = bot(belt: 3, xp: 800, last_seen_at: in_window)
+      fight = challenge(challenger: human, opponent: b)
+      fight.update_column(:created_at, in_window - 2.minutes)
 
-      described_class.new.perform(now: in_window, rng: seeded)
-      expect(Fight.pending.where(challenger: aggressor)).to be_empty
-    end
+      described_class.new.perform(now: in_window, rng: seeded, inline: true)
 
-    it "respects the pair cooldown and the single-outstanding rule" do
-      aggressor = bot(belt: 3, last_seen_at: in_window, persona_overrides: { "aggression" => 1.0 })
-      bot(belt: 3, last_seen_at: in_window)
-
-      described_class.new.perform(now: in_window, rng: Random.new(1))
-      first = Fight.pending.where(challenger: aggressor).count
-      described_class.new.perform(now: in_window, rng: Random.new(2))
-
-      # Already has an outstanding challenge out; a second tick can't stack another
-      # on the same target, and the only in-range target is that one bot.
-      expect(Fight.pending.where(challenger: aggressor).count).to eq(first)
-    end
-
-    it "caps pending challenges stacked on a single human" do
-      human = create(:fighter, belt: 3, last_seen_at: in_window)
-      other_a = create(:fighter, belt: 3)
-      other_b = create(:fighter, belt: 3)
-      challenge(challenger: other_a, opponent: human)
-      challenge(challenger: other_b, opponent: human)
-
-      aggressor = bot(belt: 3, last_seen_at: in_window, persona_overrides: { "aggression" => 1.0 })
-      described_class.new.perform(now: in_window, rng: seeded)
-
-      expect(Fight.pending.where(opponent: human).count).to eq(2)
-      expect(Fight.pending.exists?(challenger: aggressor, opponent: human)).to be(false)
+      expect(act_jobs).to be_empty
+      expect(fight.reload).to be_resolved
     end
   end
 end
