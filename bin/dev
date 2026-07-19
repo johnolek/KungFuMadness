@@ -14,4 +14,6 @@ at_exit do
   end
 end
 
-system("./bin/rails", "server", *ARGV)
+# Run Solid Queue (supervisor/dispatcher/scheduler) in-process via the Puma
+# plugin so the bot world ticks automatically, exactly like production.
+system({ "SOLID_QUEUE_IN_PUMA" => "1" }, "./bin/rails", "server", *ARGV)

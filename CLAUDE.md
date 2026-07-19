@@ -22,8 +22,15 @@ depth comes from scouting opponents' public match history.
 ## Dev workflow
 
 - `bin/dev` — Rails server + `yarn watch:css` + `yarn watch:js` (no foreman).
+  It exports `SOLID_QUEUE_IN_PUMA=1`, so Solid Queue (supervisor/dispatcher/
+  scheduler) runs in-process and the bot world ticks automatically, exactly
+  like production — no manual poking to keep the dojo alive. Dev now uses the
+  `:solid_queue` Active Job adapter (test stays `:test`).
   RubyMine users: run the server there with the watch scripts as a compound
-  run configuration.
+  run configuration, and set `SOLID_QUEUE_IN_PUMA=1` on it to get the same
+  in-process bot cadence.
+- `bin/rails bots:tick` — still available to fire a single tick by hand for
+  manual poking; no longer required for the world to run.
 - `yarn build` — one-off minified JS bundle → `app/assets/builds/application.js`.
 - `yarn build:css` — compile sass → `app/assets/builds/application.css`.
 - `bundle exec rspec` — test suite.
@@ -96,12 +103,15 @@ the current hour, steady-state online fraction ≈ 0.04/(0.04+0.033) ≈ 0.55. W
 0.02 that's ~0.7 challenges/minute initiated, roughly half of which clear
 matchmaking — so the dojo settles a fight every few minutes, not a flood.
 
-**Dev vs production cadence.** In production the tick is the only cadence: bots
-answer only while online. In dev, `config.x.bots.immediate_response = true` also
-enqueues `Bots::RespondJob` a few seconds after a human issues a challenge, so the
-loop feels alive without a running scheduler. Run ticks manually with
-`bin/rails bots:tick`; run the whole recurring set in dev with
-`SOLID_QUEUE_IN_PUMA=1 bin/dev`.
+**Dev vs production cadence.** Dev now runs the tick exactly like production:
+`bin/dev` sets `SOLID_QUEUE_IN_PUMA=1`, dev uses the `:solid_queue` adapter, and
+`config/recurring.yml` schedules `bots_tick` every minute in both environments —
+so the population lives automatically with no running-scheduler caveat. On top of
+that, dev-only `config.x.bots.immediate_response = true` still enqueues
+`Bots::RespondJob` a few seconds after a human directly challenges a bot, so a
+developer testing the challenge flow gets a fast reply instead of waiting out that
+bot's `response_delay` window (orthogonal to the world cadence; off in prod). Run
+a single tick by hand with `bin/rails bots:tick`.
 
 **Progression risk (live).** Demotion hysteresis and the Tofu belt fire through
 real `Fight#resolve!`. `RustDecayJob` (daily) bleeds 1%/day off idle fighters
