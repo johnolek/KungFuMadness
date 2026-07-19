@@ -11,72 +11,8 @@
     </p>
   </div>
 
-  <div class="dojo-grid">
-    <div class="panel-kfm">
-      <div class="panel-kfm-title">Challenges to answer</div>
-      <% if @incoming.any? %>
-        <% @incoming.each do |fight| %>
-          <div class="challenge-row">
-            <span>
-              <%= belt_chip(fight.challenger_belt) %>
-              <%= link_to fighter_display_name(fight.challenger), fighter_path(fight.challenger) %>
-            </span>
-            <%= link_to "Respond", challenge_path(fight), class: "btn-kfm" %>
-          </div>
-        <% end %>
-      <% else %>
-        <p>No one dares challenge you right now.</p>
-      <% end %>
-    </div>
-
-    <div class="panel-kfm">
-      <div class="panel-kfm-title">Challenges you've sent</div>
-      <% if @outgoing.any? %>
-        <% @outgoing.each do |fight| %>
-          <div class="challenge-row">
-            <span>
-              <%= belt_chip(fight.opponent_belt) %>
-              <%= link_to fighter_display_name(fight.opponent), fighter_path(fight.opponent) %>
-            </span>
-            <span class="result-draw">Awaiting reply…</span>
-          </div>
-        <% end %>
-      <% else %>
-        <p>You have no challenges outstanding. <%= link_to "Find an opponent", fighters_path %>.</p>
-      <% end %>
-    </div>
-  </div>
-
-  <div class="panel-kfm">
-    <div class="panel-kfm-title">Recent fights across the dojo</div>
-    <% if @recent_fights.any? %>
-      <table class="stat-table">
-        <thead>
-          <tr><th>Challenger</th><th>Opponent</th><th>Result</th><th>When</th></tr>
-        </thead>
-        <tbody>
-          <% @recent_fights.each do |fight| %>
-            <tr>
-              <td><%= link_to fighter_display_name(fight.challenger), fighter_path(fight.challenger) %></td>
-              <td><%= link_to fighter_display_name(fight.opponent), fighter_path(fight.opponent) %></td>
-              <td>
-                <%= link_to fight_path(fight) do %>
-                  <% if fight.winner_id.nil? %>
-                    Draw<%= " (KO)" if fight.ko %>
-                  <% else %>
-                    <%= fighter_display_name(fight.winner) %> won<%= " by KO" if fight.ko %>
-                  <% end %>
-                <% end %>
-              </td>
-              <td><%= time_ago_in_words(fight.resolved_at) %> ago</td>
-            </tr>
-          <% end %>
-        </tbody>
-      </table>
-    <% else %>
-      <p>No fights have been settled yet. Be the first.</p>
-    <% end %>
-  </div>
+  <div data-svelte-component="Inbox"
+       data-props="<%= { incoming: @incoming, outgoing: @outgoing }.to_json %>"></div>
 <% else %>
   <div class="panel-kfm">
     <div class="panel-kfm-title">The Dojo</div>

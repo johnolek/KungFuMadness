@@ -62,4 +62,20 @@ class Fighter < ApplicationRecord
   def outgoing_challenges
     Fight.pending.where(challenger: self).order(created_at: :desc)
   end
+
+  # Identity slice shared by the online sidebar and presence events. Just enough
+  # to render a row and link to the profile — never any private state.
+  #
+  # @return [Hash]
+  def presence_payload
+    {
+      id: id,
+      name: name,
+      display_name: display_name,
+      belt: belt,
+      belt_name: belt_name,
+      bot: bot,
+      url: Rails.application.routes.url_helpers.fighter_path(self)
+    }
+  end
 end

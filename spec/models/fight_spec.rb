@@ -115,12 +115,31 @@ RSpec.describe Fight, type: :model do
       }.to raise_error(Fight::ChallengeError)
     end
 
-    it "allows a fresh challenge once the cooldown has passed" do
+    it "allows a fresh challenge once the cooldown has passed and no pending one stands" do
       old = Fight.create_challenge!(challenger: challenger, opponent: opponent, moves: decisive_challenger_moves)
+      old.update!(status: :declined)
       old.update_column(:created_at, (Fight::CHALLENGE_COOLDOWN + 1.minute).ago)
 
       expect {
         Fight.create_challenge!(challenger: challenger, opponent: opponent, moves: decisive_challenger_moves)
+      }.not_to raise_error
+    end
+
+    it "rejects a second pending challenge in the same direction (single outstanding)" do
+      Fight.create_challenge!(challenger: challenger, opponent: opponent, moves: decisive_challenger_moves)
+
+      expect {
+        Fight.create_challenge!(challenger: challenger, opponent: opponent, moves: decisive_challenger_moves)
+      }.to raise_error(Fight::ChallengeError, /already have a challenge/i)
+    end
+
+    it "allows a pending challenge in the opposite direction (mutual sealed challenges)" do
+      old = Fight.create_challenge!(challenger: challenger, opponent: opponent, moves: decisive_challenger_moves)
+      # Push it out of the cooldown window so only the direction rule is under test.
+      old.update_column(:created_at, (Fight::CHALLENGE_COOLDOWN + 1.minute).ago)
+
+      expect {
+        Fight.create_challenge!(challenger: opponent, opponent: challenger, moves: decisive_challenger_moves)
       }.not_to raise_error
     end
 

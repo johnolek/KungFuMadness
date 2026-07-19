@@ -19,7 +19,7 @@
     <%= javascript_include_tag "application", "data-turbo-track": "reload", type: "module" %>
   </head>
 
-  <body>
+  <body data-kfm-live="<%= living_world? %>">
     <header class="kfm-header">
       <div class="kfm-banner"><%= link_to "Kung Fu Madness", root_path, style: "color: inherit; text-decoration: none;" %></div>
       <nav class="kfm-nav" aria-label="main navigation">
@@ -29,7 +29,6 @@
           <% if current_fighter %>
             <%= link_to "My Profile", fighter_path(current_fighter) %>
           <% end %>
-          <%= link_to "Passkeys", settings_credentials_path %>
           <%= button_to "Sign out", logout_path, method: :delete, class: "kfm-nav-inline" %>
         <% else %>
           <%= link_to "Sign in", login_path %>
@@ -39,14 +38,35 @@
     </header>
 
     <main class="kfm-main">
-      <div class="kfm-container">
-        <%= yield %>
+      <div class="kfm-shell <%= "kfm-shell--sidebars" if living_world? %>">
+        <% if living_world? %>
+          <aside class="kfm-sidebar kfm-sidebar--recent" aria-label="Recent fights">
+            <div data-svelte-component="RecentFightsSidebar"
+                 data-props="<%= { fights: @sidebar_recent_fights }.to_json %>"></div>
+          </aside>
+        <% end %>
+
+        <div class="kfm-content"><%= yield %></div>
+
+        <% if living_world? %>
+          <aside class="kfm-sidebar kfm-sidebar--online" aria-label="Online now">
+            <div data-svelte-component="OnlineSidebar"
+                 data-props="<%= { fighters: @sidebar_online, youId: current_fighter.id }.to_json %>"></div>
+          </aside>
+        <% end %>
       </div>
     </main>
 
     <footer class="kfm-footer">
       <p>You are visitor #000001337 &middot; Best viewed in any browser &middot; Emu. 2002</p>
     </footer>
+
+    <%# The single challenge/respond modal instance, opened via data-attribute
+        buttons anywhere on the page (see live.js). Verified fighters only. %>
+    <% if living_world? %>
+      <div data-svelte-component="ChallengeModal"
+           data-props="<%= { csrfToken: form_authenticity_token }.to_json %>"></div>
+    <% end %>
 
     <%# Flash surfaces as dismissible toasts in a fixed overlay. Always mounted
         so client-raised "toast" events land too. %>

@@ -7,8 +7,21 @@ import DojoPlaceholder from "./components/DojoPlaceholder.svelte"
 import Toasts from "./components/Toasts.svelte"
 import MoveCommitter from "./components/MoveCommitter.svelte"
 import FightPlayback from "./components/FightPlayback.svelte"
+import RecentFightsSidebar from "./components/RecentFightsSidebar.svelte"
+import OnlineSidebar from "./components/OnlineSidebar.svelte"
+import Inbox from "./components/Inbox.svelte"
+import ChallengeModal from "./components/ChallengeModal.svelte"
 
-const registry = { DojoPlaceholder, Toasts, MoveCommitter, FightPlayback }
+const registry = {
+  DojoPlaceholder,
+  Toasts,
+  MoveCommitter,
+  FightPlayback,
+  RecentFightsSidebar,
+  OnlineSidebar,
+  Inbox,
+  ChallengeModal,
+}
 const active = new Map()
 
 function mountIslands() {

@@ -4,7 +4,7 @@
   <div class="panel-kfm-title">The Roster</div>
   <table class="stat-table">
     <thead>
-      <tr><th>Fighter</th><th>Belt</th><th>XP</th><th>Record (W-L-D)</th><th>Declines</th></tr>
+      <tr><th>Fighter</th><th>Belt</th><th>XP</th><th>Record (W-L-D)</th><th></th></tr>
     </thead>
     <tbody>
       <% @fighters.each do |fighter| %>
@@ -15,7 +15,12 @@
           <td><%= belt_chip(fighter.belt) %></td>
           <td><%= fighter.xp %></td>
           <td><%= fighter.record %></td>
-          <td><%= fighter.declines %></td>
+          <td>
+            <% if current_fighter && fighter != current_fighter %>
+              <%= link_to "Challenge", new_challenge_path(opponent: fighter.id),
+                    class: "btn-kfm btn-kfm--sm", data: { challenge_open: fighter.id } %>
+            <% end %>
+          </td>
         </tr>
       <% end %>
     </tbody>

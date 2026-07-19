@@ -21,6 +21,13 @@ class Fight < ApplicationRecord
   validates :expires_at, presence: true
   validate :distinct_fighters
 
+  # Living-world broadcasts ride the transaction: a fresh challenge is mail to the
+  # opponent; a status flip to resolved feeds the dojo ticker and tells the
+  # challenger their fight settled; a flip to declined tells the challenger. On
+  # commit so a rolled-back fight never announces itself.
+  after_create_commit :broadcast_challenge_received
+  after_update_commit :broadcast_status_change
+
   scope :for_fighter, ->(fighter) { where(challenger: fighter).or(where(opponent: fighter)) }
   scope :between, ->(a, b) {
     where(challenger: a, opponent: b).or(where(challenger: b, opponent: a))
@@ -45,6 +52,10 @@ class Fight < ApplicationRecord
   # @raise [ChallengeError] on self-challenge or an active cooldown
   def self.create_challenge!(challenger:, opponent:, moves:)
     raise ChallengeError, "You can't challenge yourself." if challenger == opponent
+
+    if pending.exists?(challenger: challenger, opponent: opponent)
+      raise ChallengeError, "You already have a challenge out to them — wait for their answer."
+    end
 
     if between(challenger, opponent).where(created_at: CHALLENGE_COOLDOWN.ago..).exists?
       raise ChallengeError, "You've faced #{opponent.name} too recently — wait out the cooldown."
@@ -184,7 +195,64 @@ class Fight < ApplicationRecord
     pending? && expires_at.present? && expires_at <= Time.current
   end
 
+  # Compact resolved-fight line for the dojo ticker / recent-fights sidebar. Both
+  # sides' name + snapshot belt, who won (nil = draw), whether it was a KO, and a
+  # link to the playback. Shared by the initial server render and the live
+  # fight_resolved broadcast so both read identically.
+  #
+  # @return [Hash]
+  def ticker_payload
+    {
+      id: id,
+      ko: ko,
+      draw: winner_id.nil?,
+      winner_side: winner_side,
+      resolved_at: resolved_at&.iso8601,
+      url: url_helpers.fight_path(self),
+      challenger: fighter_summary(challenger, belt: challenger_belt),
+      opponent: fighter_summary(opponent, belt: opponent_belt)
+    }
+  end
+
+  # A pending challenge as the live inbox renders it: the other party's summary
+  # (no sealed moves — sized off {inbox_payload}) plus the URLs the card links to.
+  #
+  # @return [Hash]
+  def challenge_card_payload
+    inbox_payload.merge(
+      respond_url: url_helpers.challenge_path(self),
+      challenger_url: url_helpers.fighter_path(challenger),
+      opponent_url: url_helpers.fighter_path(opponent)
+    )
+  end
+
   private
+
+  def url_helpers
+    Rails.application.routes.url_helpers
+  end
+
+  # New challenge → notify the opponent's inbox. A challenge is always born
+  # pending; the guard keeps factory-built resolved fixtures from announcing a
+  # phantom challenge.
+  def broadcast_challenge_received
+    return unless pending?
+
+    FighterChannel.broadcast_to(opponent, event: "challenge_received", fight: challenge_card_payload)
+  end
+
+  # Status flips drive the rest of the living world. Only fire on an actual status
+  # change so unrelated updates (e.g. a lazy expiry touch) stay quiet.
+  def broadcast_status_change
+    return unless saved_change_to_status?
+
+    if resolved?
+      DojoChannel.broadcast_event(event: "fight_resolved", fight: ticker_payload)
+      FighterChannel.broadcast_to(challenger, event: "challenge_resolved", fight: ticker_payload)
+    elsif declined?
+      FighterChannel.broadcast_to(challenger, event: "challenge_declined", fight: challenge_card_payload)
+    end
+  end
 
   # Whether a pending action (respond/decline) may proceed. Lazily flips a
   # past-expiry pending fight to expired and refuses — no daily job needed to
@@ -284,7 +352,7 @@ class Fight < ApplicationRecord
       belt: belt,
       belt_name: Belt.name_for(belt),
       bot: fighter.bot,
-      record: { wins: fighter.wins, losses: fighter.losses, draws: fighter.draws, declines: fighter.declines }
+      record: { wins: fighter.wins, losses: fighter.losses, draws: fighter.draws }
     }
   end
 

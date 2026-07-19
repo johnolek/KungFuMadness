@@ -84,6 +84,47 @@ a {
   padding: 0 1rem;
 }
 
+// The page shell. Single centered column by default; a three-column grid
+// (recent-fights | content | online) once the living-world sidebars are present.
+.kfm-shell {
+  max-width: var(--kfm-container);
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+.kfm-shell--sidebars {
+  max-width: 1400px;
+  display: grid;
+  grid-template-columns: minmax(0, 15rem) minmax(0, 1fr) minmax(0, 15rem);
+  grid-template-areas: "recent content online";
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.kfm-sidebar--recent { grid-area: recent; }
+.kfm-content { grid-area: content; min-width: 0; }
+.kfm-sidebar--online { grid-area: online; }
+
+.kfm-sidebar {
+  position: sticky;
+  top: 1rem;
+}
+
+// Below the three-column breakpoint the sidebars drop beneath the main content,
+// which stays first so game actions are never pushed down the page.
+@media (max-width: 1000px) {
+  .kfm-shell--sidebars {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "content"
+      "recent"
+      "online";
+    max-width: var(--kfm-container);
+  }
+
+  .kfm-sidebar { position: static; }
+}
+
 .kfm-header {
   border-bottom: 4px solid var(--kfm-border);
   background: var(--kfm-parchment);
@@ -181,6 +222,11 @@ a {
     opacity: 0.4;
     cursor: default;
     pointer-events: none;
+  }
+
+  &--sm {
+    padding: 0.2rem 0.6rem;
+    font-size: 0.75rem;
   }
 }
 

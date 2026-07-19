@@ -60,12 +60,83 @@ RSpec.describe "Challenges", type: :request do
     end
 
     it "rejects a second challenge inside the cooldown window" do
-      post challenges_path, params: { opponent: opponent.id, moves: moves_json }
+      # A recently resolved fight between the pair leaves nothing pending, so the
+      # rejection is the time-based cooldown rather than the single-outstanding rule.
+      create(:fight, :resolved, challenger: me, opponent: opponent, created_at: 1.minute.ago)
 
       expect {
         post challenges_path, params: { opponent: opponent.id, moves: moves_json }
       }.not_to change(Fight, :count)
       expect(flash[:alert]).to match(/too recently|cooldown/i)
+    end
+
+    it "rejects a second pending challenge in the same direction" do
+      post challenges_path, params: { opponent: opponent.id, moves: moves_json }
+
+      expect {
+        post challenges_path, params: { opponent: opponent.id, moves: moves_json }
+      }.not_to change(Fight, :count)
+      expect(flash[:alert]).to match(/already have a challenge/i)
+    end
+
+    it "allows a pending challenge in the opposite direction" do
+      # An outstanding challenge FROM the opponent, aged past the cooldown, must not
+      # block a counter-challenge back at them.
+      incoming = Fight.create_challenge!(
+        challenger: opponent, opponent: me,
+        moves: (1..3).map { |r| { round: r, attack_height: 2, attack_style: 0, block_height: 2 } }
+      )
+      incoming.update_column(:created_at, (Fight::CHALLENGE_COOLDOWN + 1.minute).ago)
+
+      expect {
+        post challenges_path, params: { opponent: opponent.id, moves: moves_json }
+      }.to change(Fight, :count).by(1)
+    end
+  end
+
+  describe "GET /challenges/new.json (challenge modal payload)" do
+    it "returns the opponent summary and scouting without any declines" do
+      opponent.update!(declines: 7)
+      prey = create(:fighter, name: "Scout Bait", belt: 2)
+      create(:fight, :resolved, challenger: opponent, opponent: prey, resolved_at: 1.hour.ago)
+
+      get new_challenge_path(opponent: opponent.id, format: :json)
+
+      expect(response).to have_http_status(:ok)
+      body = JSON.parse(response.body)
+      expect(body["mode"]).to eq("challenge")
+      expect(body.dig("opponent", "name")).to eq(opponent.name)
+      expect(body["scouting"].first["opponent_name"]).to include("Scout Bait")
+      expect(response.body).not_to include("declines")
+      expect(response.body).not_to include("\"7\"")
+    end
+  end
+
+  describe "GET /challenges/:id.json (respond modal payload) sealed-moves secrecy" do
+    let!(:fight) do
+      Fight.create_challenge!(
+        challenger: me, opponent: opponent,
+        moves: (1..3).map { |r| { round: r, attack_height: 3, attack_style: 1, block_height: 1 } }
+      )
+    end
+
+    it "gives the opponent the challenger's scouting but zero sealed move data" do
+      opponent; sign_in_as(opponent_user)
+
+      get challenge_path(fight, format: :json)
+
+      expect(response).to have_http_status(:ok)
+      body = JSON.parse(response.body)
+      expect(body["mode"]).to eq("respond")
+      expect(body["fight_id"]).to eq(fight.id)
+      expect(response.body).not_to include("attack_height")
+      expect(response.body).not_to include("block_height")
+    end
+
+    it "forbids anyone but the opponent from fetching it" do
+      sign_in_as(create(:user))
+      get challenge_path(fight, format: :json)
+      expect(response).to have_http_status(:forbidden)
     end
   end
 

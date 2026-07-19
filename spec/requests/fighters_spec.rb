@@ -23,6 +23,23 @@ RSpec.describe "Fighters", type: :request do
       get fighters_path
       expect(response).to redirect_to(login_path)
     end
+
+    it "hides declines — no column header and no count surfaced" do
+      create(:fighter, name: "Chicken", declines: 12)
+
+      get fighters_path
+
+      expect(response.body).not_to include("Declines")
+      expect(response.body).not_to match(/>\s*12\s*</)
+    end
+
+    it "offers a modal challenge opener per other fighter" do
+      other = create(:fighter, name: "Target Dummy")
+
+      get fighters_path
+
+      expect(response.body).to include("data-challenge-open=\"#{other.id}\"")
+    end
   end
 
   describe "GET /fighters/:id" do
@@ -45,6 +62,32 @@ RSpec.describe "Fighters", type: :request do
       expect(response.body).to include("PixelSensei")
       expect(response.body).to include("[BOT]")
       expect(response.body).not_to include("🤖")
+    end
+
+    it "hides declines on a profile" do
+      other = create(:fighter, name: "No Shame", declines: 9)
+
+      get fighter_path(other)
+
+      expect(response.body).not_to include("Declines")
+    end
+
+    it "shows an Account panel with email + passkey manager on your own profile" do
+      get fighter_path(user.fighter)
+
+      expect(response.body).to include("Account")
+      expect(response.body).to include(user.email)
+      expect(response.body).to include("Your Passkeys").or include("Passkeys")
+      expect(response.body).to include('data-passkey="add-credential"')
+    end
+
+    it "shows no Account panel on someone else's profile" do
+      other = create(:fighter, name: "Not You")
+
+      get fighter_path(other)
+
+      expect(response.body).not_to include("data-passkey=\"add-credential\"")
+      expect(response.body).not_to include(user.email)
     end
 
     describe "match-history pagination (25 per page)" do

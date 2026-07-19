@@ -20,5 +20,10 @@ class FightersController < ApplicationController
     @history = history.offset((@page - 1) * HISTORY_PER_PAGE).limit(HISTORY_PER_PAGE)
 
     @pending_count = @fighter.incoming_challenges.count + @fighter.outgoing_challenges.count
+
+    # Your own profile doubles as your account page: the passkey manager (once in
+    # the navbar) lives here now.
+    @own_profile = current_fighter == @fighter
+    @credentials = current_user.credentials.order(:created_at) if @own_profile
   end
 end

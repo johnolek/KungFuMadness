@@ -11,11 +11,11 @@
       <p class="stat-line"><%= belt_chip(@fighter.belt) %></p>
       <p class="stat-line"><strong><%= @fighter.xp %></strong> XP</p>
       <p class="stat-line">Record: <strong><%= @fighter.record %></strong> (W-L-D)</p>
-      <p class="stat-line">Declines: <%= @fighter.declines %></p>
       <p class="stat-line">Open challenges: <%= @pending_count %></p>
       <% if current_fighter && current_fighter != @fighter %>
         <p class="stat-line">
-          <%= link_to "Challenge #{@fighter.name}", new_challenge_path(opponent: @fighter.id), class: "btn-kfm" %>
+          <%= link_to "Challenge #{@fighter.name}", new_challenge_path(opponent: @fighter.id),
+                class: "btn-kfm", data: { challenge_open: @fighter.id } %>
         </p>
       <% end %>
     </div>
@@ -44,3 +44,12 @@
     <p>No fights on record yet.</p>
   <% end %>
 </div>
+
+<% if @own_profile %>
+  <div class="panel-kfm">
+    <div class="panel-kfm-title">Account</div>
+    <p class="stat-line">Email: <strong><%= current_user.email %></strong></p>
+    <h3 style="margin: 1rem 0 0.5rem; text-transform: uppercase; letter-spacing: 0.05em;">Passkeys</h3>
+    <%= render "settings/credentials/manager", credentials: @credentials %>
+  </div>
+<% end %>

@@ -18,6 +18,10 @@ module Bots
       return unless fight&.pending?
       return unless fight.opponent.bot?
 
+      # The bot "logs on" to answer, so presence reflects the activity that a
+      # response actually represents (drives the online list in dev).
+      fight.opponent.touch(:last_seen_at)
+
       if farming?(fight)
         fight.decline!
       else
