@@ -1,0 +1,17 @@
+#!/usr/bin/env ruby
+# Runs the Rails server alongside the CSS and JS watchers, no foreman required.
+# RubyMine users: run the Rails server there instead, with the "watch:css" and
+# "watch:js" npm scripts in a compound run configuration (see package.json).
+
+watcher_pids = [ Process.spawn("yarn", "watch:css"), Process.spawn("yarn", "watch:js") ]
+
+at_exit do
+  watcher_pids.each do |pid|
+    Process.kill("TERM", pid)
+    Process.wait(pid)
+  rescue Errno::ESRCH, Errno::ECHILD
+    nil
+  end
+end
+
+system("./bin/rails", "server", *ARGV)

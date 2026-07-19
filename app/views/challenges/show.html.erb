@@ -1,0 +1,41 @@
+<% content_for :title, "Respond to #{@fight.challenger.name} — Kung Fu Madness" %>
+
+<% if @viewer_role == :challenger %>
+  <div class="panel-kfm">
+    <div class="panel-kfm-title">Awaiting <%= @fight.opponent.name %>'s reply</div>
+    <p>Your sealed challenge is out. <%= @fight.opponent.name %> hasn't answered yet —
+       they can't see the moves you committed.</p>
+    <p class="stat-line"><%= link_to "Scout your opponent", fighter_path(@fight.opponent) %></p>
+  </div>
+<% else %>
+  <div class="panel-kfm">
+    <div class="panel-kfm-title"><%= @fight.challenger.name %> challenges you</div>
+    <div class="fighter-head">
+      <div class="fighter-head__avatar">
+        <div class="belt-rect" style="background: <%= belt_var(@fight.challenger_belt) %>;"
+             role="img" aria-label="<%= Belt.name_for(@fight.challenger_belt) %> belt"></div>
+      </div>
+      <div class="fighter-head__meta">
+        <p class="stat-line"><%= belt_chip(@fight.challenger_belt) %></p>
+        <p class="stat-line">Record: <%= @fight.challenger.record %> (W-L-D)</p>
+        <p class="stat-line"><%= link_to "Scout their history →", fighter_path(@fight.challenger) %></p>
+      </div>
+    </div>
+    <p>Answer blind. Commit your three rounds — you won't see their moves until it's
+       over. Or turn the challenge down.</p>
+
+    <div
+      data-svelte-component="MoveCommitter"
+      data-props="<%= {
+        action: accept_challenge_path(@fight),
+        method: "post",
+        submitLabel: "Accept & fight",
+        csrfToken: form_authenticity_token
+      }.to_json %>"
+    ></div>
+
+    <p style="margin-top: 1rem;">
+      <%= button_to "Decline challenge", decline_challenge_path(@fight), method: :post, class: "btn-kfm" %>
+    </p>
+  </div>
+<% end %>

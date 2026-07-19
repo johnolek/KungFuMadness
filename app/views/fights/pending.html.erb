@@ -1,0 +1,13 @@
+<% content_for :title, "Pending fight — Kung Fu Madness" %>
+
+<div class="panel-kfm">
+  <div class="panel-kfm-title">This fight hasn't resolved yet</div>
+  <% if @fight.opponent == current_fighter %>
+    <p>You still have this challenge to answer.</p>
+    <p><%= link_to "Respond now", challenge_path(@fight), class: "btn-kfm" %></p>
+  <% else %>
+    <p>Your challenge to <%= @fight.opponent.name %> is still sealed and awaiting
+       their reply. No moves are visible until it resolves.</p>
+    <p><%= link_to "Back to the dojo", root_path %></p>
+  <% end %>
+</div>

@@ -1,0 +1,65 @@
+<% content_for :title, "#{@fighter.name} — Kung Fu Madness" %>
+
+<div class="panel-kfm">
+  <div class="panel-kfm-title"><%= @fighter.name %><%= " 🤖" if @fighter.bot %></div>
+  <div class="fighter-head">
+    <div class="fighter-head__avatar">
+      <div class="belt-rect" style="background: <%= belt_var(@fighter.belt) %>;"
+           role="img" aria-label="<%= @fighter.belt_name %> belt"></div>
+    </div>
+    <div class="fighter-head__meta">
+      <p class="stat-line"><%= belt_chip(@fighter.belt) %></p>
+      <p class="stat-line"><strong><%= @fighter.xp %></strong> XP</p>
+      <p class="stat-line">Record: <strong><%= @fighter.record %></strong> (W-L-D)</p>
+      <p class="stat-line">Declines: <%= @fighter.declines %></p>
+      <p class="stat-line">Open challenges: <%= @pending_count %></p>
+      <% if current_fighter && current_fighter != @fighter %>
+        <p class="stat-line">
+          <%= link_to "Challenge #{@fighter.name}", new_challenge_path(opponent: @fighter.id), class: "btn-kfm" %>
+        </p>
+      <% end %>
+    </div>
+  </div>
+</div>
+
+<div class="panel-kfm">
+  <div class="panel-kfm-title">Match history</div>
+  <% if @history.any? %>
+    <table class="stat-table">
+      <thead>
+        <tr><th>Opponent</th><th>Their belt</th><th>Result</th><th>XP</th><th>When</th></tr>
+      </thead>
+      <tbody>
+        <% @history.each do |fight| %>
+          <% as_challenger = fight.challenger_id == @fighter.id %>
+          <% other = as_challenger ? fight.opponent : fight.challenger %>
+          <% other_belt = as_challenger ? fight.opponent_belt : fight.challenger_belt %>
+          <% my_delta = as_challenger ? fight.challenger_xp_delta : fight.opponent_xp_delta %>
+          <tr>
+            <td><%= link_to other.name, fighter_path(other) %></td>
+            <td><%= belt_chip(other_belt) %></td>
+            <td>
+              <%= link_to fight_path(fight) do %>
+                <% if fight.winner_id.nil? %>
+                  <span class="result-draw">Draw<%= " (KO)" if fight.ko %></span>
+                <% elsif fight.winner_id == @fighter.id %>
+                  <span class="result-win">Win<%= " (KO)" if fight.ko %></span>
+                <% else %>
+                  <span class="result-loss">Loss<%= " (KO)" if fight.ko %></span>
+                <% end %>
+              <% end %>
+            </td>
+            <td>
+              <% if my_delta %>
+                <span class="<%= my_delta >= 0 ? 'xp-up' : 'xp-down' %>"><%= my_delta %></span>
+              <% end %>
+            </td>
+            <td><%= time_ago_in_words(fight.resolved_at) %> ago</td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  <% else %>
+    <p>No fights on record yet.</p>
+  <% end %>
+</div>

@@ -1,0 +1,25 @@
+<% content_for :title, "Sign in" %>
+<div class="panel-kfm" style="max-width: 32rem; margin: 0 auto;">
+  <div class="panel-kfm-title">Enter the Dojo</div>
+
+  <p>Sign in with a passkey — your device will offer the one you registered. No name needed.</p>
+
+  <%= form_with url: login_path, method: :post,
+        data: { passkey: "authenticate", options_url: login_options_path, callback_url: login_path, turbo: false } do |form| %>
+    <p data-passkey-error style="color: var(--kfm-belt-red);"></p>
+    <p><%= form.submit "Sign in with a passkey", class: "btn-kfm" %></p>
+  <% end %>
+
+  <hr>
+
+  <p><strong>Or get a sign-in link by email</strong></p>
+  <%= form_with url: email_sign_in_request_path, method: :post do |form| %>
+    <p>
+      <%= form.email_field :email, autocomplete: "email", required: true, placeholder: "you@example.com", style: "width:100%;" %>
+    </p>
+    <p><%= form.submit "Email me a link", class: "btn-kfm" %></p>
+    <small>A one-tap link, valid 20 minutes. Works on any device.</small>
+  <% end %>
+
+  <p><%= link_to "Need an account? Join the dojo", signup_path %></p>
+</div>

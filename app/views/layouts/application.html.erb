@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title><%= content_for(:title) || "Kung Fu Madness" %></title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="application-name" content="Kung Fu Madness">
+    <meta name="mobile-web-app-capable" content="yes">
+    <%= csrf_meta_tags %>
+    <%= csp_meta_tag %>
+
+    <%= yield :head %>
+
+    <link rel="icon" href="/icon.png" type="image/png">
+    <link rel="icon" href="/icon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="/icon.png">
+
+    <%= stylesheet_link_tag :app, "data-turbo-track": "reload" %>
+    <%= javascript_include_tag "application", "data-turbo-track": "reload", type: "module" %>
+  </head>
+
+  <body>
+    <header class="kfm-header">
+      <div class="kfm-banner"><%= link_to "Kung Fu Madness", root_path, style: "color: inherit; text-decoration: none;" %></div>
+      <nav class="kfm-nav" aria-label="main navigation">
+        <%= link_to "Dojo", root_path %>
+        <%= link_to "Fighters", fighters_path %>
+        <% if signed_in? %>
+          <% if current_fighter %>
+            <%= link_to "My Profile", fighter_path(current_fighter) %>
+          <% end %>
+          <%= link_to "Passkeys", settings_credentials_path %>
+          <%= button_to "Sign out", logout_path, method: :delete, class: "kfm-nav-inline" %>
+        <% else %>
+          <%= link_to "Sign in", login_path %>
+          <%= link_to "Join", signup_path %>
+        <% end %>
+      </nav>
+    </header>
+
+    <main class="kfm-main">
+      <div class="kfm-container">
+        <%= yield %>
+      </div>
+    </main>
+
+    <footer class="kfm-footer">
+      <p>You are visitor #000001337 &middot; Best viewed in any browser &middot; Est. 2002</p>
+    </footer>
+
+    <%# Flash surfaces as dismissible toasts in a fixed overlay. Always mounted
+        so client-raised "toast" events land too. %>
+    <div data-svelte-component="Toasts" data-props="<%= toast_props(flash).to_json %>"></div>
+  </body>
+</html>

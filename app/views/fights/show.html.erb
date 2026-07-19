@@ -1,0 +1,11 @@
+<% content_for :title, "#{@fight.challenger.name} vs #{@fight.opponent.name} — Kung Fu Madness" %>
+
+<div class="panel-kfm">
+  <div class="panel-kfm-title">
+    <%= @fight.challenger.name %> vs <%= @fight.opponent.name %>
+  </div>
+  <div
+    data-svelte-component="FightPlayback"
+    data-props="<%= { fight: @payload }.to_json %>"
+  ></div>
+</div>

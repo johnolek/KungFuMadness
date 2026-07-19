@@ -1,0 +1,41 @@
+<% content_for :title, "Join the dojo" %>
+<div class="panel-kfm" style="max-width: 32rem; margin: 0 auto;">
+  <div class="panel-kfm-title">Join the Dojo</div>
+
+  <p>No password. Pick a fighter name and we'll email you a link to enter — adding a passkey is optional.</p>
+
+  <%= form_with url: signup_path, method: :post,
+        data: { options_url: signup_options_path, callback_url: signup_passkey_path, turbo: false } do |form| %>
+    <% if @user&.errors&.any? %>
+      <ul style="color: var(--kfm-belt-red); font-weight: bold;">
+        <% @user.errors.full_messages.each do |message| %>
+          <li><%= message %></li>
+        <% end %>
+      </ul>
+    <% end %>
+
+    <p>
+      <%= form.label :username, "Fighter name", style: "display:block; font-weight:bold;" %>
+      <%= form.text_field :username, value: @user&.username, autocomplete: "username webauthn", required: true, style: "width:100%;" %>
+    </p>
+
+    <p>
+      <%= form.label :email, "Email", style: "display:block; font-weight:bold;" %>
+      <%= form.email_field :email, value: @user&.email, autocomplete: "email", required: true, style: "width:100%;" %>
+      <small>We'll send your sign-in link here to finish joining.</small>
+    </p>
+
+    <p data-passkey-error style="color: var(--kfm-belt-red);"></p>
+
+    <p><%= form.submit "Send my sign-in link", class: "btn-kfm" %></p>
+
+    <hr>
+
+    <p>
+      <button type="button" data-passkey="register" class="btn-kfm">Set up a passkey now (optional)</button>
+      <br><small>Faster sign-in with Touch ID or a security key. You can add one anytime — email links always keep working.</small>
+    </p>
+  <% end %>
+
+  <p><%= link_to "Already have an account? Sign in", login_path %></p>
+</div>

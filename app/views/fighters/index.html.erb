@@ -1,0 +1,24 @@
+<% content_for :title, "Fighters — Kung Fu Madness" %>
+
+<div class="panel-kfm">
+  <div class="panel-kfm-title">The Roster</div>
+  <table class="stat-table">
+    <thead>
+      <tr><th>Fighter</th><th>Belt</th><th>XP</th><th>Record (W-L-D)</th><th>Declines</th></tr>
+    </thead>
+    <tbody>
+      <% @fighters.each do |fighter| %>
+        <tr>
+          <td>
+            <%= link_to fighter.name, fighter_path(fighter) %>
+            <%= " 🤖" if fighter.bot %>
+          </td>
+          <td><%= belt_chip(fighter.belt) %></td>
+          <td><%= fighter.xp %></td>
+          <td><%= fighter.record %></td>
+          <td><%= fighter.declines %></td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+</div>

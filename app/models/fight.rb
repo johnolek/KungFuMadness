@@ -1,0 +1,310 @@
+class Fight < ApplicationRecord
+  # A challenge cannot be issued to the same opponent within this window of the
+  # most recent fight (any status) between the pair. Tunable; the plan's default.
+  CHALLENGE_COOLDOWN = 5.minutes
+
+  # How long a pending challenge waits for a response before it lazily expires
+  # when next touched (a daily sweep job arrives in Phase 4).
+  CHALLENGE_TTL = 7.days
+
+  belongs_to :challenger, class_name: "Fighter"
+  belongs_to :opponent, class_name: "Fighter"
+  belongs_to :winner, class_name: "Fighter", optional: true
+
+  has_many :fight_moves, dependent: :destroy
+  has_many :fight_rounds, -> { order(:round) }, dependent: :destroy, inverse_of: :fight
+
+  enum :status, { pending: 0, resolved: 1, declined: 2, expired: 3 }
+
+  validates :challenger_belt, :challenger_xp, :opponent_belt, :opponent_xp,
+            presence: true, numericality: { only_integer: true }
+  validates :expires_at, presence: true
+  validate :distinct_fighters
+
+  scope :for_fighter, ->(fighter) { where(challenger: fighter).or(where(opponent: fighter)) }
+  scope :between, ->(a, b) {
+    where(challenger: a, opponent: b).or(where(challenger: b, opponent: a))
+  }
+  scope :past_expiry, -> { where(expires_at: ..Time.current) }
+  scope :recent, -> { order(created_at: :desc) }
+  scope :recently_resolved, -> { resolved.order(resolved_at: :desc) }
+
+  # Raised when a challenge can't be created for a game-rule reason (cooldown,
+  # self-challenge). Carries a human message for the controller flash.
+  class ChallengeError < StandardError; end
+
+  # Issues a sealed challenge: snapshots both fighters' belt/XP at this instant,
+  # writes the challenger's three committed move rows, and starts the response
+  # clock. Everything happens in one transaction so a half-built challenge never
+  # exists. Rejects self-challenges and pairs still inside the cooldown window.
+  #
+  # @param challenger [Fighter]
+  # @param opponent [Fighter]
+  # @param moves [Array<Hash>] three rounds of { round:, attack_height:, attack_style:, block_height: }
+  # @return [Fight] the persisted pending fight
+  # @raise [ChallengeError] on self-challenge or an active cooldown
+  def self.create_challenge!(challenger:, opponent:, moves:)
+    raise ChallengeError, "You can't challenge yourself." if challenger == opponent
+
+    if between(challenger, opponent).where(created_at: CHALLENGE_COOLDOWN.ago..).exists?
+      raise ChallengeError, "You've faced #{opponent.name} too recently — wait out the cooldown."
+    end
+
+    transaction do
+      fight = create!(
+        challenger: challenger,
+        opponent: opponent,
+        status: :pending,
+        challenger_belt: challenger.belt,
+        challenger_xp: challenger.xp,
+        opponent_belt: opponent.belt,
+        opponent_xp: opponent.xp,
+        expires_at: CHALLENGE_TTL.from_now
+      )
+      fight.write_moves!(fighter: challenger, moves: moves)
+      fight
+    end
+  end
+
+  # Opponent commits their moves and the fight resolves. Row-locked and guarded
+  # so a double-submit is a clean no-op: the second caller sees a non-pending
+  # status and returns without touching anything. Uses the SNAPSHOT belts for
+  # both combat and XP, then applies XP, belt settlement, and win/loss/draw
+  # counters to BOTH real fighters.
+  #
+  # @param moves [Array<Hash>] the opponent's three rounds
+  # @param rng [Random] injectable dice source (seed for deterministic specs)
+  # @return [Boolean] true if this call resolved the fight, false if it was a no-op
+  def respond!(moves:, rng: Random.new)
+    with_lock do
+      return false unless actionable?
+
+      write_moves!(fighter: opponent, moves: moves)
+
+      result = FightResolver.new(
+        challenger_moves: ordered_moves(challenger),
+        opponent_moves: ordered_moves(opponent),
+        challenger_belt: challenger_belt,
+        opponent_belt: opponent_belt,
+        rng: rng
+      ).resolve
+
+      persist_result!(result)
+      true
+    end
+  end
+
+  # Opponent declines the challenge. Locked + pending-guarded; increments the
+  # opponent's decline counter exactly once.
+  #
+  # @return [Boolean] true if this call declined the fight, false if it was a no-op
+  def decline!
+    with_lock do
+      return false unless actionable?
+
+      update!(status: :declined)
+      opponent.increment!(:declines)
+      true
+    end
+  end
+
+  # Writes one fighter's committed moves. Public so create_challenge! (challenger)
+  # and respond! (opponent) share the same validated path.
+  #
+  # @param fighter [Fighter]
+  # @param moves [Array<Hash>]
+  def write_moves!(fighter:, moves:)
+    normalize_moves(moves).each do |move|
+      fight_moves.create!(
+        fighter: fighter,
+        round: move.fetch(:round),
+        attack_height: move.fetch(:attack_height),
+        attack_style: move.fetch(:attack_style),
+        block_height: move.fetch(:block_height)
+      )
+    end
+  end
+
+  # Inbox view for the opponent: enough to size up the challenge and scout the
+  # challenger, with ZERO move data. Belts/records are the challenger's SNAPSHOT
+  # so the opponent sees the fight they'd actually be fighting.
+  #
+  # @return [Hash]
+  def inbox_payload
+    {
+      id: id,
+      status: status,
+      created_at: created_at,
+      expires_at: expires_at,
+      challenger: fighter_summary(challenger, belt: challenger_belt),
+      opponent: fighter_summary(opponent, belt: opponent_belt)
+    }
+  end
+
+  # Full playback data, available ONLY once resolved: both movesets, resolved
+  # rounds, the outcome, and XP deltas. Nil before resolution so no code path can
+  # leak moves early.
+  #
+  # @return [Hash, nil]
+  def playback_payload
+    return nil unless resolved?
+
+    {
+      id: id,
+      ko: ko,
+      resolved_at: resolved_at,
+      winner_side: winner_side,
+      challenger: fighter_summary(challenger, belt: challenger_belt).merge(
+        xp_delta: challenger_xp_delta, moves: moves_payload(challenger)
+      ),
+      opponent: fighter_summary(opponent, belt: opponent_belt).merge(
+        xp_delta: opponent_xp_delta, moves: moves_payload(opponent)
+      ),
+      rounds: fight_rounds.map do |r|
+        {
+          round: r.round,
+          challenger_damage: r.challenger_damage,
+          opponent_damage: r.opponent_damage,
+          challenger_hp_after: r.challenger_hp_after,
+          opponent_hp_after: r.opponent_hp_after
+        }
+      end
+    }
+  end
+
+  # @return ["challenger", "opponent", nil] which side won, nil for a draw
+  def winner_side
+    return nil if winner_id.nil?
+
+    winner_id == challenger_id ? "challenger" : "opponent"
+  end
+
+  # @return [Boolean] whether this pending fight is past its response deadline
+  def expired_by_time?
+    pending? && expires_at.present? && expires_at <= Time.current
+  end
+
+  private
+
+  # Whether a pending action (respond/decline) may proceed. Lazily flips a
+  # past-expiry pending fight to expired and refuses — no daily job needed to
+  # keep stale challenges out of the resolution path.
+  def actionable?
+    return false unless pending?
+
+    if expires_at <= Time.current
+      update!(status: :expired)
+      return false
+    end
+
+    true
+  end
+
+  def persist_result!(result)
+    result.rounds.each do |round|
+      fight_rounds.create!(
+        round: round.round,
+        challenger_damage: round.challenger_damage,
+        opponent_damage: round.opponent_damage,
+        challenger_hp_after: round.challenger_hp_after,
+        opponent_hp_after: round.opponent_hp_after
+      )
+    end
+
+    outcome = outcome_for(result.winner)
+    deltas = Xp::Rules.deltas(
+      challenger_belt: challenger_belt,
+      opponent_belt: opponent_belt,
+      outcome: outcome
+    )
+
+    update!(
+      status: :resolved,
+      ko: result.ko,
+      resolved_at: Time.current,
+      winner_id: winner_id_for(result.winner),
+      challenger_xp_delta: deltas[:challenger],
+      opponent_xp_delta: deltas[:opponent]
+    )
+
+    apply_outcome_to_fighter(challenger, delta: deltas[:challenger], result: result_for(challenger, result.winner))
+    apply_outcome_to_fighter(opponent, delta: deltas[:opponent], result: result_for(opponent, result.winner))
+  end
+
+  # Lands XP, re-settles the belt with hysteresis, bumps the right counter, and
+  # stamps last_fought_at on a real fighter, from that fighter's own snapshot XP.
+  def apply_outcome_to_fighter(fighter, delta:, result:)
+    fighter.lock!
+    new_xp = Xp::Rules.apply(current_xp: fighter.xp, delta: delta, current_belt: fighter.belt)
+    fighter.xp = new_xp
+    fighter.belt = Belt.settle(current_belt: fighter.belt, xp: new_xp)
+    fighter.public_send(:"#{result}=", fighter.public_send(result) + 1)
+    fighter.last_fought_at = Time.current
+    fighter.save!
+  end
+
+  def outcome_for(resolver_winner)
+    case resolver_winner
+    when :challenger then :challenger_win
+    when :opponent then :opponent_win
+    else :draw
+    end
+  end
+
+  def winner_id_for(resolver_winner)
+    case resolver_winner
+    when :challenger then challenger_id
+    when :opponent then opponent_id
+    end
+  end
+
+  # The counter to bump on +fighter+ given the resolver's winner symbol.
+  def result_for(fighter, resolver_winner)
+    return :draws if resolver_winner.nil?
+
+    winner = resolver_winner == :challenger ? challenger : opponent
+    fighter == winner ? :wins : :losses
+  end
+
+  def ordered_moves(fighter)
+    fight_moves.where(fighter: fighter).order(:round).to_a
+  end
+
+  def moves_payload(fighter)
+    ordered_moves(fighter).map do |m|
+      { round: m.round, attack_height: m.attack_height, attack_style: m.attack_style, block_height: m.block_height }
+    end
+  end
+
+  def fighter_summary(fighter, belt:)
+    {
+      id: fighter.id,
+      name: fighter.name,
+      belt: belt,
+      belt_name: Belt.name_for(belt),
+      bot: fighter.bot,
+      record: { wins: fighter.wins, losses: fighter.losses, draws: fighter.draws, declines: fighter.declines }
+    }
+  end
+
+  # Coerces move hashes to symbol keys with integer values so callers may pass
+  # string-keyed JSON from a form/fetch or symbol-keyed hashes from Ruby.
+  def normalize_moves(moves)
+    moves.map do |m|
+      h = m.respond_to?(:to_unsafe_h) ? m.to_unsafe_h : m
+      h = h.symbolize_keys
+      {
+        round: Integer(h.fetch(:round)),
+        attack_height: Integer(h.fetch(:attack_height)),
+        attack_style: Integer(h.fetch(:attack_style)),
+        block_height: Integer(h.fetch(:block_height))
+      }
+    end
+  end
+
+  def distinct_fighters
+    return if challenger.nil? || opponent.nil?
+
+    errors.add(:opponent, "can't be the same fighter as the challenger") if challenger == opponent
+  end
+end

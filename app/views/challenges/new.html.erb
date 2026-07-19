@@ -1,0 +1,29 @@
+<% content_for :title, "Challenge #{@opponent.name} — Kung Fu Madness" %>
+
+<div class="panel-kfm">
+  <div class="panel-kfm-title">Challenge <%= @opponent.name %></div>
+  <div class="fighter-head">
+    <div class="fighter-head__avatar">
+      <div class="belt-rect" style="background: <%= belt_var(@opponent.belt) %>;"
+           role="img" aria-label="<%= @opponent.belt_name %> belt"></div>
+    </div>
+    <div class="fighter-head__meta">
+      <p class="stat-line"><%= belt_chip(@opponent.belt) %> &middot; <%= @opponent.xp %> XP</p>
+      <p class="stat-line">Record: <%= @opponent.record %> (W-L-D)</p>
+      <p class="stat-line"><%= link_to "Scout their history →", fighter_path(@opponent) %></p>
+    </div>
+  </div>
+  <p>Commit all three rounds. Your opponent answers blind — they never see these
+     moves until the fight resolves.</p>
+
+  <div
+    data-svelte-component="MoveCommitter"
+    data-props="<%= {
+      action: challenges_path,
+      method: "post",
+      submitLabel: "Send challenge",
+      csrfToken: form_authenticity_token,
+      hiddenFields: { opponent: @opponent.id }
+    }.to_json %>"
+  ></div>
+</div>

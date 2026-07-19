@@ -1,0 +1,10 @@
+<% content_for :title, "Confirm sign-in" %>
+<div class="panel-kfm" style="max-width: 32rem; margin: 0 auto;">
+  <div class="panel-kfm-title">Confirm Sign-in</div>
+
+  <p>Click below to finish signing in to Kung Fu Madness.</p>
+
+  <%= form_with url: email_sign_in_confirm_path(token: @token), method: :post do |form| %>
+    <p><%= form.submit "Enter the dojo", class: "btn-kfm" %></p>
+  <% end %>
+</div>
