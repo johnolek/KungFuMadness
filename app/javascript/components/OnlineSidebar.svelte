@@ -1,15 +1,16 @@
 <script>
   // Right sidebar: fighters seen recently, one single-height row each — name as
-  // a belt-colored chip — in a list that scrolls on its own. YOUR fighter is
-  // slotted in at rank so you can see how you stack up and challenge near your
-  // level. Fighters who just went offline linger dimmed (still challengeable —
-  // they may have push notifications on) until their grace runs out. Other rows
-  // carry a challenge control shaped by your standing toward them: Challenge
-  // (open the modal), a dimmed "Challenged" marker when you already have one
-  // out, or Respond when they're waiting on you.
+  // a belt-colored chip — in a list that scrolls on its own, opening centered
+  // on YOUR row (slotted in at rank) so the fighters near your level are the
+  // first thing you see. Fighters who just went offline drop into their own
+  // "Recently online" section below (dimmed, still challengeable — they may
+  // have push notifications on) until their grace runs out, keeping the online
+  // section pure. Other rows carry a challenge control shaped by your standing
+  // toward them: Challenge (open the modal), a dimmed "Challenged" marker when
+  // you already have one out, or Respond when they're waiting on you.
   //
   // Live: DojoChannel presence events (relayed as `kfm:dojo`) slide rows in and
-  // dim them out; your own actions and FighterChannel events flip a row's
+  // between sections; your own actions and FighterChannel events flip a row's
   // challenge state.
   import { slide } from "svelte/transition"
   import { flip } from "svelte/animate"
@@ -27,6 +28,25 @@
 
   // svelte-ignore state_referenced_locally -- islands remount per visit; props seed state once
   let fighters = $state(initial)
+
+  const online = $derived(fighters.filter((f) => f.online !== false))
+  const offline = $derived(fighters.filter((f) => f.online === false))
+
+  let listEl = $state(null)
+  let centeredOnYou = false
+
+  // Open the list scrolled so your row sits mid-view: the fighters around your
+  // rank — the ones worth challenging — are what you land on. Once only; live
+  // updates afterward must not yank the user's scroll position.
+  $effect(() => {
+    if (centeredOnYou || !listEl) return
+    centeredOnYou = true
+    if (listEl.scrollHeight <= listEl.clientHeight) return
+    const youRow = listEl.querySelector(".online__row--you")
+    if (!youRow) return
+    const offset = youRow.getBoundingClientRect().top - listEl.getBoundingClientRect().top
+    listEl.scrollTop = offset - (listEl.clientHeight - youRow.offsetHeight) / 2
+  })
 
   const removalTimers = new Map()
 
@@ -125,35 +145,62 @@
   })
 </script>
 
+{#snippet actions(fighter)}
+  {#if fighter.id === youId}
+    <span class="act act--you">You</span>
+  {:else if fighter.challenge_state === "respond"}
+    <button type="button" class="act act--respond" data-respond-open={fighter.fight_id}>Respond</button>
+  {:else if fighter.challenge_state === "challenged"}
+    <span class="act act--sent" title="Waiting on their answer">Challenged</span>
+  {:else}
+    <button type="button" class="act" data-challenge-open={fighter.id}>Challenge</button>
+  {/if}
+{/snippet}
+
 <section class="panel-kfm sidebar-panel">
   <div class="panel-kfm-title">Online now</div>
   {#if fighters.length === 0}
     <p class="empty">The dojo is quiet. No one else is on the mat.</p>
   {:else}
-    <ul class="online">
-      {#each fighters as fighter (fighter.id)}
-        <li
-          class="online__row"
-          class:online__row--you={fighter.id === youId}
-          class:online__row--offline={fighter.online === false}
-          transition:slide={slideIn}
-          animate:flip={{ duration: flipDuration }}
-        >
-          <a class="online__name" href={fighter.url}>
-            <span class="chip" style={beltChipStyle(fighter.belt)}>{fighter.display_name}</span>
-          </a>
-          {#if fighter.id === youId}
-            <span class="act act--you">You</span>
-          {:else if fighter.challenge_state === "respond"}
-            <button type="button" class="act act--respond" data-respond-open={fighter.fight_id}>Respond</button>
-          {:else if fighter.challenge_state === "challenged"}
-            <span class="act act--sent" title="Waiting on their answer">Challenged</span>
-          {:else}
-            <button type="button" class="act" data-challenge-open={fighter.id}>Challenge</button>
-          {/if}
-        </li>
-      {/each}
-    </ul>
+    <div class="scroller" bind:this={listEl}>
+      {#if online.length === 0}
+        <p class="empty">No one is on the mat right now.</p>
+      {:else}
+        <ul class="online">
+          {#each online as fighter (fighter.id)}
+            <li
+              class="online__row"
+              class:online__row--you={fighter.id === youId}
+              transition:slide={slideIn}
+              animate:flip={{ duration: flipDuration }}
+            >
+              <a class="online__name" href={fighter.url}>
+                <span class="chip" style={beltChipStyle(fighter.belt)}>{fighter.display_name}</span>
+              </a>
+              {@render actions(fighter)}
+            </li>
+          {/each}
+        </ul>
+      {/if}
+
+      {#if offline.length > 0}
+        <div class="subhead" transition:slide={slideIn}>Recently online</div>
+        <ul class="online">
+          {#each offline as fighter (fighter.id)}
+            <li
+              class="online__row online__row--offline"
+              transition:slide={slideIn}
+              animate:flip={{ duration: flipDuration }}
+            >
+              <a class="online__name" href={fighter.url}>
+                <span class="chip" style={beltChipStyle(fighter.belt)}>{fighter.display_name}</span>
+              </a>
+              {@render actions(fighter)}
+            </li>
+          {/each}
+        </ul>
+      {/if}
+    </div>
   {/if}
 </section>
 
@@ -162,13 +209,27 @@
 
   .empty { color: var(--kfm-ink-soft); font-size: 0.85rem; }
 
+  /* No overscroll-behavior: contain here — when the list hits its top or
+     bottom the scroll must chain to the page, or mobile users get stuck. */
+  .scroller {
+    max-height: min(60vh, 28rem);
+    overflow-y: auto;
+  }
+
   .online {
     list-style: none;
     margin: 0;
     padding: 0;
-    max-height: min(60vh, 28rem);
-    overflow-y: auto;
-    overscroll-behavior: contain;
+  }
+
+  .subhead {
+    margin: 0.6rem 0 0.15rem;
+    font-size: 0.62rem;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--kfm-ink-soft);
+    border-bottom: 1px solid var(--kfm-ink-soft);
   }
 
   .online__row {
