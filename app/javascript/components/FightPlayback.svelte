@@ -66,6 +66,10 @@
         {@const oTaken = damageTaken("opponent", round)}
         {@const cAfter = hpAfter("challenger", round)}
         {@const oAfter = hpAfter("opponent", round)}
+        {@const cAttackLanded = oTaken > 0}
+        {@const oAttackLanded = cTaken > 0}
+        {@const cBlockWorked = cTaken === 0}
+        {@const oBlockWorked = oTaken === 0}
         <section class="rp">
           <header class="rp__head">
             Round {round.round}
@@ -77,36 +81,38 @@
             <div class="rp__name" style={beltChipStyle(fight.challenger.belt)}>{fight.challenger.display_name}</div>
             <div class="rp__name" style={beltChipStyle(fight.opponent.belt)}>{fight.opponent.display_name}</div>
 
-            <div class="rp__move">
+            <div class="rp__move" class:rp__move--good={cAttackLanded}>
               <MoveIcon kind="attack" height={cMove.attack_height} style={cMove.attack_style} size={26} />
               <span>{HEIGHT[cMove.attack_height]} {STYLE[cMove.attack_style]}</span>
             </div>
-            <div class="rp__move">
+            <div class="rp__move" class:rp__move--good={oBlockWorked}>
               <MoveIcon kind="block" height={oMove.block_height} size={26} />
               <span>{HEIGHT[oMove.block_height]} block</span>
             </div>
 
-            <div class="rp__move">
+            <div class="rp__move" class:rp__move--good={cBlockWorked}>
               <MoveIcon kind="block" height={cMove.block_height} size={26} />
               <span>{HEIGHT[cMove.block_height]} block</span>
             </div>
-            <div class="rp__move">
+            <div class="rp__move" class:rp__move--good={oAttackLanded}>
               <MoveIcon kind="attack" height={oMove.attack_height} style={oMove.attack_style} size={26} />
               <span>{HEIGHT[oMove.attack_height]} {STYLE[oMove.attack_style]}</span>
             </div>
 
-            <div class="rp__hp" class:rp__hp--hit={cTaken > 0}>
+            <div class="rp__hp">
               {#if cTaken > 0}
-                HP {cAfter + cTaken} <span class="rp__arrow">→</span> <strong>{cAfter}</strong>
+                <span class="rp__hp-before">HP {cAfter + cTaken}</span>
+                <span class="rp__hp-after" class:rp__hp-after--ko={cAfter < 1}>→ {cAfter}</span>
               {:else}
-                HP <strong>{cAfter}</strong>
+                <span class="rp__hp-steady">HP {cAfter}</span>
               {/if}
             </div>
-            <div class="rp__hp" class:rp__hp--hit={oTaken > 0}>
+            <div class="rp__hp">
               {#if oTaken > 0}
-                HP {oAfter + oTaken} <span class="rp__arrow">→</span> <strong>{oAfter}</strong>
+                <span class="rp__hp-before">HP {oAfter + oTaken}</span>
+                <span class="rp__hp-after" class:rp__hp-after--ko={oAfter < 1}>→ {oAfter}</span>
               {:else}
-                HP <strong>{oAfter}</strong>
+                <span class="rp__hp-steady">HP {oAfter}</span>
               {/if}
             </div>
           </div>
@@ -254,20 +260,44 @@
     text-transform: uppercase;
     letter-spacing: 0.02em;
     white-space: nowrap;
+    color: var(--kfm-ink-soft, #4a3a24);
+  }
+
+  .rp__move--good {
+    font-weight: bold;
+    color: var(--kfm-ink, #1a1108);
   }
 
   .rp__hp {
     margin-top: 0.25rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.05rem;
     font-size: 0.8rem;
     font-variant-numeric: tabular-nums;
-    color: var(--kfm-ink-soft, #4a3a24);
-    text-align: center;
   }
 
-  .rp__hp strong { color: var(--kfm-ink, #1a1108); }
+  .rp__hp-before {
+    color: var(--kfm-ink-soft, #4a3a24);
+  }
 
-  .rp__hp--hit .rp__arrow,
-  .rp__hp--hit strong { color: var(--kfm-belt-red, #b83d3d); }
+  .rp__hp-steady {
+    color: var(--kfm-ink, #1a1108);
+    font-weight: bold;
+  }
+
+  .rp__hp-after {
+    color: var(--kfm-belt-red, #b83d3d);
+    font-weight: bold;
+  }
+
+  .rp__hp-after--ko {
+    background: var(--kfm-ink, #1a1108);
+    color: var(--kfm-parchment, #f4e4bc);
+    padding: 0 0.35rem;
+    border: 2px solid var(--kfm-belt-red, #b83d3d);
+  }
 
   @media (max-width: 700px) {
     .rounds {
