@@ -213,10 +213,11 @@ class ChallengesController < ApplicationController
   # In dev, resolve bot challenges shortly after they're issued so the loop feels
   # alive without a running scheduler. Off in production, where Bots::TickJob is
   # the real cadence — bots answer only while "online" (config.x.bots.immediate_response).
+  # Never faster than 15s: a human has to at least read the challenge.
   def enqueue_bot_response(fight)
     return unless Rails.application.config.x.bots.immediate_response
     return unless fight.opponent.bot?
 
-    Bots::RespondJob.set(wait: rand(2..8).seconds).perform_later(fight.id)
+    Bots::RespondJob.set(wait: rand(15..40).seconds).perform_later(fight.id)
   end
 end

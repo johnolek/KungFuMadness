@@ -192,7 +192,9 @@
           <span class="opp__record">Record {data.opponent.record}</span>
         </div>
 
-        <details class="scout">
+        <MoveGrid onchange={onGrid} />
+
+        <details class="scout" open>
           <summary>Match history — last {data.scouting.length} fights</summary>
           {#if data.scouting.length === 0}
             <p class="scout__empty">No resolved fights on record. You're stepping into the unknown.</p>
@@ -227,8 +229,6 @@
             </div>
           {/if}
         </details>
-
-        <MoveGrid onchange={onGrid} />
 
         {#if error}<p class="modal__error">{error}</p>{/if}
 
@@ -314,7 +314,7 @@
     text-decoration: none;
   }
 
-  .scout { margin: 0.5rem 0 0.75rem; }
+  .scout { margin: 0.75rem 0; }
   .scout summary { cursor: pointer; font-weight: bold; text-transform: uppercase; font-size: 0.8rem; }
   .scout__empty { font-size: 0.85rem; color: var(--kfm-ink-soft); }
   .scout__table { margin-top: 0.5rem; font-size: 0.8rem; }

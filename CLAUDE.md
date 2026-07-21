@@ -137,8 +137,9 @@ sets `SOLID_QUEUE_IN_PUMA=1`, dev uses the `:solid_queue` adapter, and
 the planner fires each minute and the resulting `Bots::ActJob`s execute (in forked
 workers) at their jittered seconds, with no running-scheduler caveat. On top of
 that, dev-only `config.x.bots.immediate_response = true` still enqueues
-`Bots::RespondJob` a few seconds after a human directly challenges a specific bot,
-so a developer testing the challenge flow gets a fast reply instead of waiting out
+`Bots::RespondJob` 15–40 seconds after a human directly challenges a specific bot
+(never under 15s — a "human" has to at least read the challenge), so a developer
+testing the challenge flow gets a fast-but-plausible reply instead of waiting out
 that bot's `response_delay` window (orthogonal to the world cadence; off in prod).
 Run a single tick by hand with `bin/rails bots:tick` (planner + inline ActJobs).
 
