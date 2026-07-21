@@ -12,6 +12,15 @@
       <p class="stat-line"><strong><%= @fighter.xp %></strong> XP</p>
       <p class="stat-line">Record: <strong><%= @fighter.record %></strong> (W-L-D)</p>
       <p class="stat-line">Open challenges: <%= @pending_count %></p>
+      <p class="stat-line">
+        <% if @fighter.online? %>
+          <strong class="online-marker">Online now</strong>
+        <% elsif @fighter.last_seen_at %>
+          Last online <%= time_ago_in_words(@fighter.last_seen_at) %> ago
+        <% else %>
+          Never seen online
+        <% end %>
+      </p>
 
       <% form = @scouting.recent_form %>
       <% if form.any? %>

@@ -379,6 +379,8 @@ a {
   margin: 0.2rem 0;
 }
 
+.online-marker { color: var(--kfm-belt-green); }
+
 // Per-round attack+block glyph pairs in a history table's Moves column.
 .moves-cell {
   white-space: nowrap;
