@@ -51,10 +51,11 @@ Set these on the **application** resource. "Req?" = required for a healthy deplo
 | `WEBAUTHN_RP_NAME` | No | `Kung Fu Madness` | Human-readable name shown in the passkey prompt. Defaults to `Kung Fu Madness`. |
 | `MAIL_FROM` | **Yes** | `dojo@kungfumadness.com` | Sender for the magic-link sign-in email; also the Web Push VAPID `mailto:` subject. Without it mail sends from `dojo@localhost`. |
 | `MAIL_HOST` | No | `kungfumadness.com` | Host used to build the magic-link URL in emails. If unset, derived from `WEBAUTHN_ORIGIN`'s host, else `localhost`. Usually leave unset. |
-| `SMTP_ADDRESS` | **Yes\*** | `smtp.postmarkapp.com` | SMTP server. \*Required for sign-in to work at all — the only login path is the emailed magic link. |
+| `SMTP2GO_API_KEY` | **Yes\*** | `api-XXXXXXXX...` | **Preferred email path.** Sends via the SMTP2GO HTTP API (`Smtp2goDelivery`) over HTTPS/443 with an explicit logged result per message. When set, all `SMTP_*` vars are ignored. \*Email is required for sign-in; set either this or the `SMTP_*` block. |
+| `SMTP_ADDRESS` | **Yes\*** | `smtp.postmarkapp.com` | SMTP server — the fallback path when `SMTP2GO_API_KEY` is not set. |
 | `SMTP_PORT` | No | `587` | SMTP port. Default `587` (STARTTLS). |
-| `SMTP_USERNAME` | **Yes\*** | `apikey` / account user | SMTP auth user. |
-| `SMTP_PASSWORD` | **Yes\*** | `<smtp password/token>` | SMTP auth password/token. |
+| `SMTP_USERNAME` | **Yes\*** | `apikey` / account user | SMTP auth user (fallback path). |
+| `SMTP_PASSWORD` | **Yes\*** | `<smtp password/token>` | SMTP auth password/token (fallback path). |
 | `SMTP_AUTHENTICATION` | No | `plain` | `plain`, `login`, or `cram_md5`. Default `plain`. |
 | `SMTP_DOMAIN` | No | `kungfumadness.com` | HELO domain some providers require. |
 | `VAPID_PUBLIC_KEY` | No | `BJ...` (base64url) | Web Push public key. Without the pair, the opt-in push UI hides itself and everything else still works. Generate with `bin/rails push:generate_vapid`. |
@@ -65,10 +66,28 @@ Set these on the **application** resource. "Req?" = required for a healthy deplo
 | `SOLID_QUEUE_IN_PUMA` | No (baked `1`) | `1` | Runs jobs + recurring scheduler in Puma. **Leave baked**; do not set to empty or the bot tick / daily jobs stop running. |
 | `RAILS_LOG_LEVEL` | No | `info` | Log verbosity. Default `info`. |
 
-\* SMTP is functionally required: the **only** way to sign in is the emailed magic
-link. If SMTP is missing the app still boots and passes health checks, but nobody
-can log in. `raise_delivery_errors` is off, so a bad SMTP config fails quietly
-(check logs) rather than 500-ing the sign-in request.
+\* Email is functionally required: the **only** way to sign in is the emailed magic
+link. If neither `SMTP2GO_API_KEY` nor the `SMTP_*` vars are set the app still
+boots and passes health checks, but nobody can log in.
+
+### Email via SMTP2GO (recommended)
+
+Set **one** env var and you're done:
+
+1. In SMTP2GO's dashboard, create an API key (Settings → API Keys) and **verify
+   your sender** — either the `MAIL_FROM` address or its domain (Sending →
+   Verified Senders). SMTP2GO rejects sends from unverified senders.
+2. Set `SMTP2GO_API_KEY` on the app resource (runtime is enough; buildtime not
+   needed) and make sure `MAIL_FROM` is the verified sender.
+3. Redeploy. Every send now logs an explicit result:
+   `[smtp2go] delivered "Your sign-in link" to … email_id=…` on success, or
+   `[smtp2go] delivery FAILED (HTTP 4xx) …` with the provider's reason on
+   failure — so a bad key or unverified sender is visible in the container logs
+   instead of vanishing into SMTP.
+
+No ports, TLS negotiation, or SMTP credentials involved — it's a JSON POST to
+`api.smtp2go.com` over 443. The plain-SMTP config remains as a fallback for any
+other provider: it applies only when `SMTP2GO_API_KEY` is absent.
 
 **`RAILS_MASTER_KEY` vs `SECRET_KEY_BASE`.** This repo commits an encrypted
 `config/credentials.yml.enc`, so the recommended path is to set `RAILS_MASTER_KEY`
@@ -173,3 +192,28 @@ Just push to the deployed branch (or trigger a redeploy). Each deploy rebuilds t
 image, runs `db:prepare` (new migrations apply automatically), and restarts. The
 roster and brains persist in Postgres; `kfm:bootstrap` is a no-op on a populated
 database, so you never need to re-run it.
+
+## 8. Troubleshooting
+
+**`ArgumentError: key must be 16 bytes` at boot (`cipher.key = @secret`),
+container unhealthy, deploy rolls back.** The `RAILS_MASTER_KEY` value the
+container received is the wrong *length* — it must be **exactly the 32 hex
+characters** of your local `config/master.key`, nothing more. A trailing
+newline, a leading/trailing space, surrounding quotes, or an incomplete paste
+all produce this exact error (`db:prepare` dies before Puma starts, so `/up`
+never answers). A key of the right length but the wrong *value* fails
+differently (`ActiveSupport::MessageEncryptor::InvalidMessage`). Fix: in
+Coolify, reveal the value (eye icon), delete the variable, and re-add it by
+pasting the raw 32 characters — on macOS,
+`cat config/master.key | pbcopy` copies it without a newline. Both "Available at
+Buildtime" and "Available at Runtime" should be checked.
+
+**Coolify warns the healthcheck needs curl/wget.** Informational only — this
+image installs `curl` and declares its own `HEALTHCHECK` against `/up`. If the
+container is reported unhealthy, the real cause is in the container logs (as
+above), not the healthcheck mechanism.
+
+**Build fails on `SecretsUsedInArgOrEnv`.** Already handled: the Dockerfile's
+check directive skips that single lint rule (the `RAILS_MASTER_KEY` build ARG is
+the standard Rails/Coolify shape). If you see it, you're building a stale
+commit.
