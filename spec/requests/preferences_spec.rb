@@ -7,10 +7,10 @@ RSpec.describe "Preferences", type: :request do
     context "as a verified fighter" do
       before { sign_in_as(user) }
 
-      it "turns bot challenges off" do
+      it "turns bot challenges off and returns to the profile" do
         patch preferences_path, params: { allow_bot_challenges: "0" }
 
-        expect(response).to redirect_to(root_path)
+        expect(response).to redirect_to(fighter_path(user.fighter))
         expect(user.reload.allow_bot_challenges).to be(false)
       end
 

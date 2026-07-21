@@ -81,6 +81,23 @@ RSpec.describe "Fighters", type: :request do
       expect(response.body).to include('data-passkey="add-credential"')
     end
 
+    it "shows the challenge-alerts and preferences panels on your own profile" do
+      get fighter_path(user.fighter)
+
+      expect(response.body).to include("data-push-alerts")
+      expect(response.body).to include("data-push-threshold")
+      expect(response.body).to include("Allow challenges from bots")
+    end
+
+    it "shows no settings panels on someone else's profile" do
+      other = create(:fighter, name: "Someone Else")
+
+      get fighter_path(other)
+
+      expect(response.body).not_to include("data-push-alerts")
+      expect(response.body).not_to include("Allow challenges from bots")
+    end
+
     it "shows no match history on your own profile — it lives on the homepage" do
       create(:fight, :resolved,
              challenger: user.fighter,

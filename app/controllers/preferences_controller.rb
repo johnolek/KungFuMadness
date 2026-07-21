@@ -5,6 +5,6 @@ class PreferencesController < ApplicationController
     allow = params[:allow_bot_challenges] == "1"
     current_user.update!(allow_bot_challenges: allow)
     notice = allow ? "Bots may challenge you." : "Bots will no longer challenge you."
-    redirect_to root_path, notice: notice
+    redirect_to fighter_path(current_fighter), notice: notice
   end
 end

@@ -83,6 +83,32 @@
 <% end %>
 
 <% if @own_profile %>
+  <% if Push.configured? %>
+    <%# Progressive opt-in: hidden until push.js confirms the browser supports it. %>
+    <div class="panel-kfm push-alerts" data-push-alerts hidden>
+      <div class="panel-kfm-title">Challenge alerts</div>
+      <p class="stat-line" data-push-status>Get a notification the moment someone challenges you.</p>
+      <button type="button" class="btn-kfm btn-kfm--sm" data-push-enable hidden>Enable notifications</button>
+      <button type="button" class="btn-kfm btn-kfm--sm" data-push-disable hidden>Disable</button>
+      <label class="push-threshold" data-push-threshold-row hidden>
+        Notify only when my pending challenges reach
+        <input type="number" inputmode="numeric" min="1" max="1000" step="1"
+               value="<%= current_user.push_min_pending_challenges %>" data-push-threshold>
+      </label>
+    </div>
+  <% end %>
+
+  <div class="panel-kfm">
+    <div class="panel-kfm-title">Preferences</div>
+    <%= form_with url: preferences_path, method: :patch, class: "prefs-form" do |form| %>
+      <label class="prefs-row">
+        <%= form.check_box :allow_bot_challenges, checked: current_user.allow_bot_challenges %>
+        Allow challenges from bots
+      </label>
+      <button type="submit" class="btn-kfm btn-kfm--sm">Save</button>
+    <% end %>
+  </div>
+
   <div class="panel-kfm">
     <div class="panel-kfm-title">Account</div>
     <p class="stat-line">Email: <strong><%= current_user.email %></strong></p>

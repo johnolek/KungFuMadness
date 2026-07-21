@@ -77,9 +77,10 @@ push subscribers. The SW (cache `kfm-v4` — bump on change) precaches
 `/offline.html` and serves it when a navigation fails offline; it intercepts
 nothing else.
 
-Opt-in system push when a challenge lands. Flow: the dojo renders a "Challenge
-alerts" panel + a `vapid-public-key` meta tag (verified fighters only, gated on
-`Push.configured?`); `app/javascript/push.js` subscribes via the Push API and
+Opt-in system push when a challenge lands. Flow: your own profile page renders a
+"Challenge alerts" panel (the layout carries the `vapid-public-key` meta tag,
+verified fighters only, gated on `Push.configured?`);
+`app/javascript/push.js` subscribes via the Push API and
 POST/DELETEs `PushSubscription`s (unique by endpoint, one row per browser). On a
 new challenge `Fight#broadcast_challenge_received` enqueues
 `PushChallengeNotificationJob` for human opponents (never bots); the job holds the
@@ -87,7 +88,7 @@ push until the opponent's pending challenges reach their
 `users.push_min_pending_challenges` (default 1, user-set 1–1000 via `PATCH
 /push_settings` from the Challenge alerts panel), then fans out to each
 subscription via `PushSubscription#deliver`, which prunes gone (404/410)
-subscriptions. A dojo Preferences panel also lets a user flip
+subscriptions. A Preferences panel on your own profile also lets a user flip
 `users.allow_bot_challenges` (`PATCH /preferences`): when off, bots skip them in
 matchmaking and `Fight.create_challenge!` rejects any bot challenger. The service worker's `push` / `notificationclick` handlers show
 the notification (with app icon + badge) and focus/open the dojo. iOS requires
