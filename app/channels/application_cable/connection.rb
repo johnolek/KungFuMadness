@@ -1,12 +1,14 @@
 module ApplicationCable
-  # Cable subscribers must be signed in. Auth mirrors the HTTP side: the encrypted
-  # session cookie carries the user id, so a socket is exactly as trusted as the
-  # page that opened it. Anonymous connections are rejected outright.
+  # Auth mirrors the HTTP side: the encrypted session cookie carries the user id,
+  # so a socket is exactly as trusted as the page that opened it. Anonymous
+  # connections are allowed with a nil current_user — the public DojoChannel
+  # serves signed-out spectators; channels carrying personal state must reject
+  # nil themselves (FighterChannel does).
   class Connection < ActionCable::Connection::Base
     identified_by :current_user
 
     def connect
-      self.current_user = find_verified_user || reject_unauthorized_connection
+      self.current_user = find_verified_user
     end
 
     private

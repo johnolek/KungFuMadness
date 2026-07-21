@@ -14,13 +14,17 @@ RSpec.describe ApplicationCable::Connection, type: :channel do
     expect(connection.current_user).to eq(user)
   end
 
-  it "rejects a connection with no session cookie" do
-    expect { connect }.to have_rejected_connection
+  it "connects anonymously with no session cookie (public dojo spectating)" do
+    connect
+
+    expect(connection.current_user).to be_nil
   end
 
-  it "rejects a connection whose session points at no user" do
+  it "connects anonymously when the session points at no user" do
     cookies.encrypted[session_key] = { value: { "user_id" => -1 } }
 
-    expect { connect }.to have_rejected_connection
+    connect
+
+    expect(connection.current_user).to be_nil
   end
 end

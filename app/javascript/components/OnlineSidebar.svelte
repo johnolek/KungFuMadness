@@ -16,7 +16,7 @@
   import { flip } from "svelte/animate"
   import { beltChipStyle } from "./belt.js"
 
-  let { fighters: initial = [], youId } = $props()
+  let { fighters: initial = [], youId = null, canChallenge = true } = $props()
 
   // Mirrors the server's Fighter::RECENT_OFFLINE_GRACE.
   const OFFLINE_GRACE_MS = 5 * 60 * 1000
@@ -146,7 +146,9 @@
 </script>
 
 {#snippet actions(fighter)}
-  {#if fighter.id === youId}
+  {#if !canChallenge}
+    <!-- Signed-out spectators browse the roster; the mat needs an account. -->
+  {:else if fighter.id === youId}
     <span class="act act--you">You</span>
   {:else if fighter.challenge_state === "respond"}
     <button type="button" class="act act--respond" data-respond-open={fighter.fight_id}>Respond</button>

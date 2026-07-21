@@ -36,10 +36,18 @@ RSpec.describe "Fights", type: :request do
       expect(response.body).to include('data-svelte-component="FightPlayback"')
     end
 
-    it "requires a verified fighter" do
+    it "shows a resolved fight to signed-out spectators" do
       fight = resolved_fight
       get fight_path(fight)
-      expect(response).to redirect_to(login_path)
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include('data-svelte-component="FightPlayback"')
+    end
+
+    it "hides a still-pending fight from signed-out visitors" do
+      challenger; opponent
+      fight = pending_fight
+      get fight_path(fight)
+      expect(response).to redirect_to(root_path)
     end
 
     it "hides a still-pending fight from non-participants" do

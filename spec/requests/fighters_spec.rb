@@ -18,10 +18,11 @@ RSpec.describe "Fighters", type: :request do
       expect(response.body.index(strong.name)).to be < response.body.index(weak.name)
     end
 
-    it "requires a verified fighter" do
+    it "is public to signed-out visitors, without challenge controls" do
       delete logout_path
       get fighters_path
-      expect(response).to redirect_to(login_path)
+      expect(response).to have_http_status(:ok)
+      expect(response.body).not_to include("data-challenge-open")
     end
 
     it "hides declines — no column header and no count surfaced" do
@@ -87,6 +88,18 @@ RSpec.describe "Fighters", type: :request do
       expect(response.body).to include("data-push-alerts")
       expect(response.body).to include("data-push-threshold")
       expect(response.body).to include("Allow challenges from bots")
+    end
+
+    it "shows a profile to signed-out visitors with no challenge control" do
+      delete logout_path
+      other = create(:fighter, name: "Public Figure")
+
+      get fighter_path(other)
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include("Public Figure")
+      expect(response.body).not_to include("Challenge Public Figure")
+      expect(response.body).not_to include("data-push-alerts")
     end
 
     it "shows no settings panels on someone else's profile" do

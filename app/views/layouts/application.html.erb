@@ -27,7 +27,9 @@
     <%= javascript_include_tag "application", "data-turbo-track": "reload", type: "module" %>
   </head>
 
-  <body data-kfm-live="<%= living_world? %>">
+  <%# kfm-live: everyone gets the public dojo stream (ticker + presence).
+      kfm-fighter: only a verified fighter gets the personal channel + presence pings. %>
+  <body data-kfm-live="true" data-kfm-fighter="<%= living_world? %>">
     <header class="kfm-header">
       <div class="kfm-banner"><%= link_to "Kung Fu Madness", root_path, style: "color: inherit; text-decoration: none;" %></div>
       <nav class="kfm-nav" aria-label="main navigation">
@@ -52,23 +54,20 @@
     </header>
 
     <main class="kfm-main">
-      <div class="kfm-shell <%= "kfm-shell--sidebars" if living_world? %>">
-        <% if living_world? %>
-          <aside class="kfm-sidebar kfm-sidebar--recent" aria-label="Recent fights">
-            <div data-svelte-component="RecentFightsSidebar"
-                 data-props="<%= { fights: @sidebar_recent_fights, youId: current_fighter.id,
-                                   hideSpoilers: current_user.hide_fight_spoilers }.to_json %>"></div>
-          </aside>
-        <% end %>
+      <div class="kfm-shell kfm-shell--sidebars">
+        <aside class="kfm-sidebar kfm-sidebar--recent" aria-label="Recent fights">
+          <div data-svelte-component="RecentFightsSidebar"
+               data-props="<%= { fights: @sidebar_recent_fights, youId: current_fighter&.id,
+                                 hideSpoilers: current_user ? current_user.hide_fight_spoilers : false }.to_json %>"></div>
+        </aside>
 
         <div class="kfm-content"><%= yield %></div>
 
-        <% if living_world? %>
-          <aside class="kfm-sidebar kfm-sidebar--online" aria-label="Online now">
-            <div data-svelte-component="OnlineSidebar"
-                 data-props="<%= { fighters: @sidebar_online, youId: current_fighter.id }.to_json %>"></div>
-          </aside>
-        <% end %>
+        <aside class="kfm-sidebar kfm-sidebar--online" aria-label="Online now">
+          <div data-svelte-component="OnlineSidebar"
+               data-props="<%= { fighters: @sidebar_online, youId: current_fighter&.id,
+                                 canChallenge: living_world? }.to_json %>"></div>
+        </aside>
       </div>
     </main>
 

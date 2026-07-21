@@ -25,10 +25,10 @@ RSpec.describe "Leaderboard", type: :request do
       expect(response.body).not_to include("Most active this week")
     end
 
-    it "requires a verified fighter" do
+    it "is public to signed-out visitors" do
       delete logout_path
       get leaderboard_path
-      expect(response).to redirect_to(login_path)
+      expect(response).to have_http_status(:ok)
     end
   end
 end

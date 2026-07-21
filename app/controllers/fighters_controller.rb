@@ -1,5 +1,7 @@
 class FightersController < ApplicationController
-  before_action :require_verified_fighter
+  # Roster and profiles are public — scouting is the spectator sport. Challenge
+  # controls and the own-profile account/settings panels only render for a
+  # signed-in verified fighter (the views guard on current_fighter/current_user).
 
   # The roster / leaderboard: everyone, strongest belt first.
   def index

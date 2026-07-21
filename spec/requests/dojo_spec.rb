@@ -91,5 +91,13 @@ RSpec.describe "Dojo", type: :request do
 
       expect(response.body).not_to include("NavBadges")
     end
+
+    it "shows both sidebars to signed-out visitors" do
+      get root_path
+
+      expect(response.body).to include('data-svelte-component="RecentFightsSidebar"')
+      expect(response.body).to include('data-svelte-component="OnlineSidebar"')
+      expect(response.body).to include("canChallenge&quot;:false")
+    end
   end
 end

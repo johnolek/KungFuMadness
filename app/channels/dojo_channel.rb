@@ -10,11 +10,14 @@
 class DojoChannel < ApplicationCable::Channel
   STREAM = "dojo".freeze
 
+  # Anonymous spectators may watch the stream; only a fighter steps onto the mat
+  # (presence stamp + online broadcast).
   def subscribed
-    fighter = current_user.fighter
-    return reject unless fighter
-
     stream_from STREAM
+
+    fighter = current_user&.fighter
+    return unless fighter
+
     fighter.touch(:last_seen_at)
     DojoChannel.broadcast_presence(fighter, online: true)
   end
@@ -30,7 +33,7 @@ class DojoChannel < ApplicationCable::Channel
   # performs this every ~45s so an open tab keeps the fighter inside the 2-minute
   # online window.
   def ping(_data = {})
-    current_user.fighter&.touch(:last_seen_at)
+    current_user&.fighter&.touch(:last_seen_at)
   end
 
   # @param payload [Hash] arbitrary event hash pushed to every dojo subscriber

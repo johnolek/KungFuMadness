@@ -67,6 +67,10 @@ function startLivingWorld() {
     received: (message) => dispatch("kfm:dojo", message),
   })
 
+  // The personal channel and the presence ping only exist for a verified
+  // fighter; signed-out visitors just watch the public dojo stream.
+  if (document.body?.dataset.kfmFighter !== "true") return
+
   consumer.subscriptions.create({ channel: "FighterChannel" }, {
     received: (message) => {
       dispatch("kfm:fighter", message)

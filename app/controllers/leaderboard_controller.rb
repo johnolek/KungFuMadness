@@ -1,5 +1,5 @@
 class LeaderboardController < ApplicationController
-  before_action :require_verified_fighter
+  # Public: standings are part of the spectacle.
 
   # How many fighters the board surfaces.
   TOP_LIMIT = 25

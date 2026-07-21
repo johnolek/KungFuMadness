@@ -14,21 +14,24 @@ class ApplicationController < ActionController::Base
   # sidebars, the challenge modal, the cable subscriptions). True only for a
   # signed-in, email-verified fighter.
   def living_world?
-    current_user&.email_verified? && current_fighter.present?
+    !!(current_user&.email_verified? && current_fighter.present?)
   end
 
   # How many fighters the online sidebar seeds with, and how many recent fights.
   SIDEBAR_ONLINE_LIMIT = 40
   SIDEBAR_RECENT_LIMIT = 20
 
+  # The sidebars are the shop window: signed-out visitors get them too (static
+  # challenge-free rows plus the public live ticker). Only the nav badge seeds
+  # need a verified fighter.
   def prepare_living_world_sidebars
-    return unless living_world?
-
     @sidebar_recent_fights = Fight.recently_resolved
                                   .includes(:challenger, :opponent, :winner, :fight_moves)
                                   .limit(SIDEBAR_RECENT_LIMIT)
                                   .map { |fight| fight.ticker_payload(mask_for: current_fighter) }
     @sidebar_online = build_online_sidebar(current_fighter)
+    return unless living_world?
+
     # Seeded as id lists (not counts) so the nav badges can dedupe live cable
     # events against what the server already counted.
     @nav_incoming_ids = current_fighter.incoming_challenges.ids
@@ -43,25 +46,26 @@ class ApplicationController < ActionController::Base
   # standing challenge state toward them: "respond" when they have a pending
   # challenge waiting on you (carrying its id), "challenged" when you already
   # have a pending one out to them, or "open" when the mat is clear. Your own
-  # row is tagged "you".
+  # row is tagged "you". A nil viewer (signed-out visitor) gets the same roster
+  # with every row "open" — the component hides the action controls for them.
   #
-  # @param viewer [Fighter]
+  # @param viewer [Fighter, nil]
   # @return [Array<Hash>]
   def build_online_sidebar(viewer)
     seen_window = Fighter::ONLINE_WINDOW + Fighter::RECENT_OFFLINE_GRACE
     roster = Fighter.online(within: seen_window).ranked.limit(SIDEBAR_ONLINE_LIMIT).to_a
-    roster = ([ viewer ] + roster).uniq.sort_by { |f| [ -f.belt, -f.xp, f.name ] }
-    outbound = Fight.pending.where(challenger: viewer).pluck(:opponent_id).to_set
-    inbound = Fight.pending.where(opponent: viewer).pluck(:challenger_id, :id).to_h
+    roster = ([ viewer ] + roster).compact.uniq.sort_by { |f| [ -f.belt, -f.xp, f.name ] }
+    outbound = viewer ? Fight.pending.where(challenger: viewer).pluck(:opponent_id).to_set : Set.new
+    inbound = viewer ? Fight.pending.where(opponent: viewer).pluck(:challenger_id, :id).to_h : {}
     now = Time.current
 
     roster.map do |fighter|
-      state = if fighter.id == viewer.id then "you"
+      state = if fighter.id == viewer&.id then "you"
       elsif inbound.key?(fighter.id) then "respond"
       elsif outbound.include?(fighter.id) then "challenged"
       else "open"
       end
-      online = fighter.id == viewer.id || fighter.online?
+      online = fighter.id == viewer&.id || fighter.online?
       row = fighter.presence_payload.merge(
         challenge_state: state, fight_id: inbound[fighter.id], online: online
       )

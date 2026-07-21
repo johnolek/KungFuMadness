@@ -1,9 +1,8 @@
 class FightsController < ApplicationController
-  before_action :require_verified_fighter
-
-  # Resolved fights are public to any verified fighter (spectating + scouting).
-  # A still-pending fight isn't a spectacle: only its two participants may peek,
-  # and only at minimal state — the sealed moves never surface here.
+  # Resolved fights are public to anyone (spectating + scouting — the sidebar
+  # links here for signed-out visitors too). A still-pending fight isn't a
+  # spectacle: only its two participants may peek, and only at minimal state —
+  # the sealed moves never surface here.
   def show
     @fight = Fight.find(params[:id])
 
