@@ -202,8 +202,19 @@ rosters, feeds, tables, inbox, or the modal.
 and bots together. (The most-active-this-week board was removed.)
 
 **Match history home** — YOUR paginated history lives on the dojo homepage
-(`DojoController`, `?page=`); your own profile shows none. Other fighters'
-profiles keep theirs (that's the scouting surface).
+(`DojoController`, `?page=`) as the LIVE `MatchHistory.svelte` island: seeded
+with `Fight#history_row_payload(viewer:)` rows and prepending in real time from
+FighterChannel `challenge_resolved` broadcasts (`ticker_payload` now carries
+per-side moves + XP deltas for this). Your own profile shows none; other
+fighters' profiles keep the ERB table (the scouting surface). No history table
+shows dates — the fight page carries the "Settled …" stamp. Moves columns are
+two stacked glyph rows (attacks over blocks) so patterns scan horizontally.
+Profiles also show "Online now" / "Last online N ago" from `last_seen_at`.
+
+**iOS** — every interactive element gets `touch-action: manipulation`, inputs
+are 16px, and the viewport pins `maximum-scale=1`, so taps are instant and
+focusing a field never zooms. The MoveGrid stacks its rounds vertically under
+700px instead of horizontal scrolling.
 
 **Playback** — `FightPlayback.svelte` renders a resolved fight as round panels
 (3-up on desktop, scroll-snap carousel on mobile). Each panel is a 2-column grid
