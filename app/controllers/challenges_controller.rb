@@ -180,7 +180,6 @@ class ChallengesController < ApplicationController
       end
       {
         id: fight.id,
-        date: fight.resolved_at.strftime("%Y-%m-%d"),
         opponent_name: other.display_name,
         opponent_belt: other_belt,
         moves: fight.scouting_moves_for(fighter),

@@ -16,6 +16,8 @@ class DojoController < ApplicationController
     history = fighter.resolved_fights.includes(:challenger, :opponent, :fight_moves)
     @history_total_pages = [ (history.count / HISTORY_PER_PAGE.to_f).ceil, 1 ].max
     @history_page = params[:page].to_i.clamp(1, @history_total_pages)
-    @history = history.offset((@history_page - 1) * HISTORY_PER_PAGE).limit(HISTORY_PER_PAGE)
+    @history_rows = history.offset((@history_page - 1) * HISTORY_PER_PAGE)
+                           .limit(HISTORY_PER_PAGE)
+                           .map { |fight| fight.history_row_payload(viewer: fighter) }
   end
 end

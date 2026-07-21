@@ -1,0 +1,96 @@
+<script>
+  // The homepage "Your match history" table, live: seeded with server rows and
+  // prepending in real time when a FighterChannel challenge_resolved broadcast
+  // (relayed as `kfm:fighter`) lands. Uses the global stat-table styling so it
+  // reads identically to the ERB history tables on profiles.
+  import MoveIcon from "./MoveIcon.svelte"
+  import { beltChipStyle } from "./belt.js"
+
+  let { fights: initial = [], youId } = $props()
+
+  const RESULT_LABEL = { win: "Won", loss: "Lost", draw: "Draw" }
+
+  // svelte-ignore state_referenced_locally -- islands remount per visit; props seed state once
+  let fights = $state(initial)
+
+  function rowFromTicker(fight) {
+    const mineSide =
+      fight.challenger?.id === youId ? "challenger"
+      : fight.opponent?.id === youId ? "opponent"
+      : null
+    if (!mineSide) return null
+    const mine = fight[mineSide]
+    const other = mineSide === "challenger" ? fight.opponent : fight.challenger
+    const result =
+      fight.winner_side === null ? "draw" : fight.winner_side === mineSide ? "win" : "loss"
+    return {
+      id: fight.id,
+      url: fight.url,
+      opponent_name: other.display_name,
+      opponent_belt: other.belt,
+      opponent_url: other.url,
+      moves: mine.moves ?? [],
+      result,
+      ko: fight.ko,
+      xp_delta: mine.xp_delta
+    }
+  }
+
+  $effect(() => {
+    const handler = (event) => {
+      const message = event.detail
+      if (message?.event !== "challenge_resolved" || !message.fight) return
+      const row = rowFromTicker(message.fight)
+      if (!row || fights.some((f) => f.id === row.id)) return
+      fights = [row, ...fights]
+    }
+    document.addEventListener("kfm:fighter", handler)
+    return () => document.removeEventListener("kfm:fighter", handler)
+  })
+</script>
+
+{#if fights.length === 0}
+  <p>No fights on record yet. <a href="/fighters">Find an opponent</a>.</p>
+{:else}
+  <div class="table-scroll">
+    <table class="stat-table">
+      <thead>
+        <tr><th>Opponent</th><th>Moves</th><th>Result</th><th>XP</th><th></th></tr>
+      </thead>
+      <tbody>
+        {#each fights as row (row.id)}
+          <tr>
+            <td>
+              <a class="belt-link" href={row.opponent_url}>
+                <span class="belt-chip" style={beltChipStyle(row.opponent_belt)}>{row.opponent_name}</span>
+              </a>
+            </td>
+            <td class="moves-cell">
+              <span class="move-set">
+                <span class="move-set__row">
+                  {#each row.moves as move, i (i)}
+                    <MoveIcon kind="attack" height={move[0]} style={move[1]} size={15} />
+                  {/each}
+                </span>
+                <span class="move-set__row">
+                  {#each row.moves as move, i (i)}
+                    <MoveIcon kind="block" height={move[2]} size={15} />
+                  {/each}
+                </span>
+              </span>
+            </td>
+            <td>
+              <span class="result-{row.result}">{RESULT_LABEL[row.result]}{row.ko ? " (KO)" : ""}</span>
+            </td>
+            <td>
+              {#if row.xp_delta !== null && row.xp_delta !== undefined}
+                <span class={row.xp_delta >= 0 ? "xp-up" : "xp-down"}>{row.xp_delta}</span>
+              {/if}
+            </td>
+            <td><a href={row.url}>Watch</a></td>
+          </tr>
+        {/each}
+      </tbody>
+    </table>
+  </div>
+{/if}

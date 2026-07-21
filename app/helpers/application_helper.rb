@@ -104,22 +104,19 @@ module ApplicationHelper
     SVG
   end
 
-  # A fight's move tuples ({Fight#scouting_moves_for}) as per-round attack+block
-  # glyph pairs for a history-table cell.
+  # A fight's move tuples ({Fight#scouting_moves_for}) as two stacked glyph
+  # rows — attacks over blocks — so a table column scans horizontally across
+  # the rounds.
   #
   # @param moves [Array<Array(Integer, Integer, Integer)>]
   # @return [ActiveSupport::SafeBuffer]
   def move_glyphs(moves)
-    safe_join(
-      moves.map do |attack_height, attack_style, block_height|
-        content_tag(
-          :span,
-          move_icon(kind: :attack, height: attack_height, style: attack_style) +
-            move_icon(kind: :block, height: block_height),
-          class: "move-round"
-        )
-      end
-    )
+    attacks = safe_join(moves.map { |height, style, _| move_icon(kind: :attack, height: height, style: style) })
+    blocks = safe_join(moves.map { |_, _, height| move_icon(kind: :block, height: height) })
+    content_tag(:span, class: "move-set") do
+      content_tag(:span, attacks, class: "move-set__row") +
+        content_tag(:span, blocks, class: "move-set__row")
+    end
   end
 
   # The current-form callout, e.g. "3-fight win streak" — nil when there's no

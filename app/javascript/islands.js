@@ -11,6 +11,7 @@ import RecentFightsSidebar from "./components/RecentFightsSidebar.svelte"
 import OnlineSidebar from "./components/OnlineSidebar.svelte"
 import Inbox from "./components/Inbox.svelte"
 import ChallengeModal from "./components/ChallengeModal.svelte"
+import MatchHistory from "./components/MatchHistory.svelte"
 
 const registry = {
   DojoPlaceholder,
@@ -21,6 +22,7 @@ const registry = {
   OnlineSidebar,
   Inbox,
   ChallengeModal,
+  MatchHistory,
 }
 const active = new Map()
 

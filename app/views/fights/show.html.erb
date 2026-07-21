@@ -4,6 +4,7 @@
   <div class="panel-kfm-title">
     <%= @fight.challenger.name %> vs <%= @fight.opponent.name %>
   </div>
+  <p class="stat-line fight-settled">Settled <%= @fight.resolved_at.strftime("%Y-%m-%d %H:%M") %> UTC</p>
   <div
     data-svelte-component="FightPlayback"
     data-props="<%= { fight: @payload, reveal: @reveal }.to_json %>"

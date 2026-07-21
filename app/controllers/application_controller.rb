@@ -25,7 +25,7 @@ class ApplicationController < ActionController::Base
     return unless living_world?
 
     @sidebar_recent_fights = Fight.recently_resolved
-                                  .includes(:challenger, :opponent, :winner)
+                                  .includes(:challenger, :opponent, :winner, :fight_moves)
                                   .limit(SIDEBAR_RECENT_LIMIT)
                                   .map(&:ticker_payload)
     @sidebar_online = build_online_sidebar(current_fighter)

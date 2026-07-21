@@ -199,20 +199,23 @@
           {:else}
             <div class="table-scroll">
             <table class="stat-table scout__table">
-              <thead><tr><th>Date</th><th>Vs</th><th>Moves</th><th>Result</th><th></th></tr></thead>
+              <thead><tr><th>Vs</th><th>Moves</th><th>Result</th><th></th></tr></thead>
               <tbody>
                 {#each data.scouting as row (row.id)}
                   <tr>
-                    <td>{row.date}</td>
                     <td><span class="chip" style={beltChipStyle(row.opponent_belt)}>{row.opponent_name}</span></td>
-                    <td>
-                      <span class="moves">
-                        {#each row.moves as [attackHeight, attackStyle, blockHeight], i (i)}
-                          <span class="moves__round">
-                            <MoveIcon kind="attack" height={attackHeight} style={attackStyle} size={16} />
-                            <MoveIcon kind="block" height={blockHeight} size={16} />
-                          </span>
-                        {/each}
+                    <td class="moves-cell">
+                      <span class="move-set">
+                        <span class="move-set__row">
+                          {#each row.moves as move, i (i)}
+                            <MoveIcon kind="attack" height={move[0]} style={move[1]} size={15} />
+                          {/each}
+                        </span>
+                        <span class="move-set__row">
+                          {#each row.moves as move, i (i)}
+                            <MoveIcon kind="block" height={move[2]} size={15} />
+                          {/each}
+                        </span>
                       </span>
                     </td>
                     <td class="res res--{row.result}">{RESULT_LABEL[row.result]}{row.ko ? " (KO)" : ""}</td>
@@ -312,21 +315,6 @@
   }
 
   .scout { margin: 0.5rem 0 0.75rem; }
-
-  .moves {
-    display: inline-flex;
-    gap: 0.4rem;
-    align-items: center;
-  }
-
-  .moves__round {
-    display: inline-flex;
-    gap: 1px;
-    align-items: center;
-    padding: 0 0.15rem;
-    border-right: 1px dashed var(--kfm-ink-soft);
-  }
-  .moves__round:last-child { border-right: none; }
   .scout summary { cursor: pointer; font-weight: bold; text-transform: uppercase; font-size: 0.8rem; }
   .scout__empty { font-size: 0.85rem; color: var(--kfm-ink-soft); }
   .scout__table { margin-top: 0.5rem; font-size: 0.8rem; }

@@ -7,7 +7,6 @@
 <table class="stat-table">
   <thead>
     <tr>
-      <th>Date</th>
       <th>Opponent</th>
       <th>Moves</th>
       <th>Result</th>
@@ -22,7 +21,6 @@
       <% other_belt = as_challenger ? fight.opponent_belt : fight.challenger_belt %>
       <% my_delta = as_challenger ? fight.challenger_xp_delta : fight.opponent_xp_delta %>
       <tr>
-        <td><%= fight.resolved_at.strftime("%Y-%m-%d") %></td>
         <td><%= fighter_name_link(other, belt: other_belt) %></td>
         <td class="moves-cell"><%= move_glyphs(fight.scouting_moves_for(fighter)) %></td>
         <td>

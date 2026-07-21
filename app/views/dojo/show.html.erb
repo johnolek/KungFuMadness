@@ -15,26 +15,23 @@
 
   <div class="panel-kfm">
     <div class="panel-kfm-title">Your match history</div>
-    <% if @history.any? %>
-      <%= render "fights/history_table", fighter: current_fighter, fights: @history, show_xp: true %>
+    <div data-svelte-component="MatchHistory"
+         data-props="<%= { fights: @history_rows, youId: current_fighter.id }.to_json %>"></div>
 
-      <% if @history_total_pages > 1 %>
-        <div class="page-nav">
-          <% if @history_page > 1 %>
-            <%= link_to "← Newer", root_path(page: @history_page - 1), class: "btn-kfm" %>
-          <% else %>
-            <span class="btn-kfm is-disabled">← Newer</span>
-          <% end %>
-          <span class="page-nav__label">Page <%= @history_page %> of <%= @history_total_pages %></span>
-          <% if @history_page < @history_total_pages %>
-            <%= link_to "Older →", root_path(page: @history_page + 1), class: "btn-kfm" %>
-          <% else %>
-            <span class="btn-kfm is-disabled">Older →</span>
-          <% end %>
-        </div>
-      <% end %>
-    <% else %>
-      <p>No fights on record yet. <%= link_to "Find an opponent", fighters_path %>.</p>
+    <% if @history_total_pages > 1 %>
+      <div class="page-nav">
+        <% if @history_page > 1 %>
+          <%= link_to "← Newer", root_path(page: @history_page - 1), class: "btn-kfm" %>
+        <% else %>
+          <span class="btn-kfm is-disabled">← Newer</span>
+        <% end %>
+        <span class="page-nav__label">Page <%= @history_page %> of <%= @history_total_pages %></span>
+        <% if @history_page < @history_total_pages %>
+          <%= link_to "Older →", root_path(page: @history_page + 1), class: "btn-kfm" %>
+        <% else %>
+          <span class="btn-kfm is-disabled">Older →</span>
+        <% end %>
+      </div>
     <% end %>
   </div>
 

@@ -247,9 +247,10 @@ class Fight < ApplicationRecord
         .count >= FARM_LIMIT
   end
 
-  # Compact resolved-fight line for the dojo ticker / recent-fights sidebar. Both
-  # sides' name + snapshot belt, who won (nil = draw), whether it was a KO, and a
-  # link to the playback. Shared by the initial server render and the live
+  # Compact resolved-fight line for the dojo ticker / recent-fights sidebar and
+  # the live match-history prepend. Both sides' name + snapshot belt (plus their
+  # now-public moves and XP delta), who won (nil = draw), whether it was a KO,
+  # and a link to the playback. Shared by the initial server render and the live
   # fight_resolved broadcast so both read identically.
   #
   # @return [Hash]
@@ -261,8 +262,38 @@ class Fight < ApplicationRecord
       winner_side: winner_side,
       resolved_at: resolved_at&.iso8601,
       url: url_helpers.fight_path(self),
-      challenger: fighter_summary(challenger, belt: challenger_belt),
+      challenger: fighter_summary(challenger, belt: challenger_belt)
+                    .merge(moves: scouting_moves_for(challenger), xp_delta: challenger_xp_delta),
       opponent: fighter_summary(opponent, belt: opponent_belt)
+                  .merge(moves: scouting_moves_for(opponent), xp_delta: opponent_xp_delta)
+    }
+  end
+
+  # One row of +viewer+'s match history, shaped for the homepage island (which
+  # also builds the same rows live from {ticker_payload} broadcasts).
+  #
+  # @param viewer [Fighter] whose perspective the row reads from
+  # @return [Hash]
+  def history_row_payload(viewer:)
+    as_challenger = challenger_id == viewer.id
+    other = as_challenger ? opponent : challenger
+    other_belt = as_challenger ? opponent_belt : challenger_belt
+    delta = as_challenger ? challenger_xp_delta : opponent_xp_delta
+    result = if winner_id.nil? then "draw"
+    elsif winner_id == viewer.id then "win"
+    else "loss"
+    end
+
+    {
+      id: id,
+      url: url_helpers.fight_path(self),
+      opponent_name: other.display_name,
+      opponent_belt: other_belt,
+      opponent_url: url_helpers.fighter_path(other),
+      moves: scouting_moves_for(viewer),
+      result: result,
+      ko: ko,
+      xp_delta: delta
     }
   end
 
@@ -427,6 +458,7 @@ class Fight < ApplicationRecord
       belt: belt,
       belt_name: Belt.name_for(belt),
       bot: fighter.bot,
+      url: url_helpers.fighter_path(fighter),
       record: { wins: fighter.wins, losses: fighter.losses, draws: fighter.draws }
     }
   end
