@@ -82,9 +82,14 @@ alerts" panel + a `vapid-public-key` meta tag (verified fighters only, gated on
 `Push.configured?`); `app/javascript/push.js` subscribes via the Push API and
 POST/DELETEs `PushSubscription`s (unique by endpoint, one row per browser). On a
 new challenge `Fight#broadcast_challenge_received` enqueues
-`PushChallengeNotificationJob` for human opponents (never bots); the job fans out
-to each subscription via `PushSubscription#deliver`, which prunes gone (404/410)
-subscriptions. The service worker's `push` / `notificationclick` handlers show
+`PushChallengeNotificationJob` for human opponents (never bots); the job holds the
+push until the opponent's pending challenges reach their
+`users.push_min_pending_challenges` (default 1, user-set 1–1000 via `PATCH
+/push_settings` from the Challenge alerts panel), then fans out to each
+subscription via `PushSubscription#deliver`, which prunes gone (404/410)
+subscriptions. A dojo Preferences panel also lets a user flip
+`users.allow_bot_challenges` (`PATCH /preferences`): when off, bots skip them in
+matchmaking and `Fight.create_challenge!` rejects any bot challenger. The service worker's `push` / `notificationclick` handlers show
 the notification (with app icon + badge) and focus/open the dojo. iOS requires
 add-to-home-screen before push can be enabled.
 
@@ -128,8 +133,10 @@ passed since the plan, it RE-EVALUATES against current state: it applies the
 presence change only if still warranted (no duplicate online/offline broadcast),
 answers each flagged challenge only if it's still pending (skipping any that
 resolved or expired in the interim), and picks a live challenge target NOW, so the
-±2-belt reach, 5-min pair cooldown, single-outstanding rule, and 2-pending cap on
-any human are all enforced against fresh counts. It leans on the same locked,
+±2-belt reach, 5-min pair cooldown, single-outstanding rule, and 6-pending cap on
+any human are all enforced against fresh counts (humans whose user turned off
+`allow_bot_challenges` never enter the candidate pool, and
+`Fight.create_challenge!` refuses a bot challenger against them as backstop). It leans on the same locked,
 pending-guarded paths (`Fight#respond!`, `#decline!`, `Fight.create_challenge!`),
 so a duplicate or stale ActJob is a clean no-op — no distributed lock needed. The
 durable delay is Solid Queue's, not in-memory scheduling, so the jitter survives

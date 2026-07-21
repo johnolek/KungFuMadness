@@ -58,6 +58,10 @@ class Fight < ApplicationRecord
   def self.create_challenge!(challenger:, opponent:, moves:)
     raise ChallengeError, "You can't challenge yourself." if challenger == opponent
 
+    if challenger.bot? && !opponent.accepts_bot_challenges?
+      raise ChallengeError, "#{opponent.name} doesn't accept challenges from bots."
+    end
+
     if pending.exists?(challenger: challenger, opponent: opponent)
       raise ChallengeError, "You already have a challenge out to them — wait for their answer."
     end

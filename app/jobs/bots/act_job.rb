@@ -22,7 +22,7 @@ module Bots
     # Belts either side of a bot it's willing to challenge.
     BELT_REACH = 2
     # Most pending challenges allowed to stack on a single human opponent.
-    MAX_PENDING_PER_HUMAN = 2
+    MAX_PENDING_PER_HUMAN = 6
 
     # @param bot_id [Integer]
     # @param presence [String, nil] "login" | "logout" | nil
@@ -81,12 +81,14 @@ module Bots
 
     # Pick a live opponent and open a challenge. Candidates are re-queried NOW, so
     # the pool reflects who is actually online at this jittered moment, and the
-    # per-human pending cap is enforced against current counts.
+    # per-human pending cap is enforced against current counts. Humans who turned
+    # bot challenges off never enter the pool.
     def issue_challenge(bot)
       bot.update_column(:last_seen_at, now)
 
       candidates = Fighter.where(last_seen_at: (now - Fighter::ONLINE_WINDOW)..)
                           .where.not(id: bot.id)
+                          .accepting_bot_challenges
                           .to_a
       target = pick_target(bot, candidates, human_pending_counts)
       return unless target

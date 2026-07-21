@@ -49,6 +49,17 @@
       </label>
     </div>
   <% end %>
+
+  <div class="panel-kfm">
+    <div class="panel-kfm-title">Preferences</div>
+    <%= form_with url: preferences_path, method: :patch, class: "prefs-form" do |form| %>
+      <label class="prefs-row">
+        <%= form.check_box :allow_bot_challenges, checked: current_user.allow_bot_challenges %>
+        Allow challenges from bots
+      </label>
+      <button type="submit" class="btn-kfm btn-kfm--sm">Save</button>
+    <% end %>
+  </div>
 <% else %>
   <div class="panel-kfm">
     <div class="panel-kfm-title">The Dojo</div>

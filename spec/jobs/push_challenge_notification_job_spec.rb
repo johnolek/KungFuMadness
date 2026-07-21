@@ -15,7 +15,7 @@ RSpec.describe PushChallengeNotificationJob, type: :job do
   end
 
   let(:challenger) { create(:fighter, name: "PepsiDad", belt: 3, xp: 800) }
-  let(:opponent_user) { create(:user, push_min_pending_challenges: 1) }
+  let(:opponent_user) { create(:user) }
   let(:opponent) { opponent_user.fighter }
 
   before { allow(WebPush).to receive(:payload_send) }

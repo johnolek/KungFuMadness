@@ -51,6 +51,9 @@ Rails.application.routes.draw do
   # Push preferences: how many challenges must be pending before a push fires.
   patch "push_settings", to: "push_settings#update"
 
+  # Game preferences (currently: whether bots may challenge you).
+  patch "preferences", to: "preferences#update"
+
   # PWA: dynamic manifest + service worker (the SW must be same-origin at root
   # scope to control the whole app). Rendered from app/views/pwa/*. The pinned
   # formats keep template lookup working when browsers send Accept headers

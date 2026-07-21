@@ -99,6 +99,24 @@ RSpec.describe Fight, type: :model do
       }.to raise_error(Fight::ChallengeError)
     end
 
+    it "rejects a bot challenging a human who turned bot challenges off" do
+      user = create(:user)
+      user.update!(allow_bot_challenges: false)
+      bot = create(:fighter, :bot, belt: 1)
+
+      expect {
+        Fight.create_challenge!(challenger: bot, opponent: user.fighter, moves: decisive_challenger_moves)
+      }.to raise_error(Fight::ChallengeError, /doesn't accept challenges from bots/)
+    end
+
+    it "still lets a human challenge someone who turned bot challenges off" do
+      user = create(:user)
+      user.update!(allow_bot_challenges: false)
+
+      fight = Fight.create_challenge!(challenger: challenger, opponent: user.fighter, moves: decisive_challenger_moves)
+      expect(fight).to be_pending
+    end
+
     it "rejects a challenge inside the cooldown window with the pair" do
       Fight.create_challenge!(challenger: challenger, opponent: opponent, moves: decisive_challenger_moves)
 

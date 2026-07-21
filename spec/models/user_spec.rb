@@ -28,8 +28,8 @@ RSpec.describe User, type: :model do
   end
 
   describe "push_min_pending_challenges" do
-    it "defaults to 3" do
-      expect(subject.push_min_pending_challenges).to eq(3)
+    it "defaults to 1" do
+      expect(subject.push_min_pending_challenges).to eq(1)
     end
 
     it "allows 1 through 1000" do
@@ -39,6 +39,10 @@ RSpec.describe User, type: :model do
       expect(build(:user, push_min_pending_challenges: 1001)).not_to be_valid
       expect(build(:user, push_min_pending_challenges: 2.5)).not_to be_valid
     end
+  end
+
+  it "allows bot challenges by default" do
+    expect(subject.allow_bot_challenges).to be(true)
   end
 
   describe "email verification state" do

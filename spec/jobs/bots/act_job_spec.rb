@@ -119,16 +119,26 @@ RSpec.describe Bots::ActJob, type: :job do
 
     it "caps pending challenges stacked on a single human" do
       human = create(:fighter, belt: 3, last_seen_at: in_window)
-      other_a = create(:fighter, belt: 3)
-      other_b = create(:fighter, belt: 3)
-      challenge(challenger: other_a, opponent: human)
-      challenge(challenger: other_b, opponent: human)
+      described_class::MAX_PENDING_PER_HUMAN.times do
+        challenge(challenger: create(:fighter, belt: 3), opponent: human)
+      end
 
       aggressor = bot(belt: 3, last_seen_at: in_window)
       described_class.new.perform(aggressor.id, challenge: true, now: in_window, rng: seeded)
 
-      expect(Fight.pending.where(opponent: human).count).to eq(2)
+      expect(Fight.pending.where(opponent: human).count).to eq(described_class::MAX_PENDING_PER_HUMAN)
       expect(Fight.pending.exists?(challenger: aggressor, opponent: human)).to be(false)
+    end
+
+    it "never challenges a human who turned bot challenges off" do
+      user = create(:user)
+      user.update!(allow_bot_challenges: false)
+      user.fighter.update!(belt: 3, last_seen_at: in_window)
+
+      aggressor = bot(belt: 3, last_seen_at: in_window)
+      described_class.new.perform(aggressor.id, challenge: true, now: in_window, rng: seeded)
+
+      expect(Fight.pending.where(challenger: aggressor)).to be_empty
     end
 
     it "respects the pair cooldown after a recent fight" do

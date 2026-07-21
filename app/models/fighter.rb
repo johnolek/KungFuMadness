@@ -24,6 +24,11 @@ class Fighter < ApplicationRecord
   scope :bots, -> { where(bot: true) }
   scope :humans, -> { where(bot: false) }
   scope :online, ->(within: ONLINE_WINDOW) { where(last_seen_at: within.ago..) }
+  # Everyone except humans whose user switched bot challenges off. Humans with no
+  # user row (test fixtures) have no join match, so they stay in.
+  scope :accepting_bot_challenges, -> {
+    where.not(id: humans.joins(:user).where(users: { allow_bot_challenges: false }).select(:id))
+  }
 
   # Any settled belt change — through a fight, through rust decay — announces
   # itself to the dojo ticker on commit, so promotions and demotions read the same
@@ -49,6 +54,11 @@ class Fighter < ApplicationRecord
   # @return [Boolean] whether the fighter is currently in the sub-white Tofu belt
   def tofu?
     belt.zero?
+  end
+
+  # @return [Boolean] whether bots may open challenges against this fighter
+  def accepts_bot_challenges?
+    bot? || user.nil? || user.allow_bot_challenges
   end
 
   # @return [Boolean] whether the fighter was seen inside the online window
