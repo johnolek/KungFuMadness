@@ -49,8 +49,10 @@
   <div class="corners">
     {#each [fight.challenger, fight.opponent] as fighter}
       <div class="corner">
-        <div class="corner__rect" style="background: {beltColor(fighter.belt)};"></div>
-        <div class="corner__name">{fighter.display_name}</div>
+        <a class="corner__link" href={fighter.url}>
+          <div class="corner__rect" style="background: {beltColor(fighter.belt)};"></div>
+          <div class="corner__name">{fighter.display_name}</div>
+        </a>
         <div class="corner__belt">{fighter.belt_name} belt</div>
         <div class="corner__record">{fighter.record.wins}-{fighter.record.losses}-{fighter.record.draws}</div>
       </div>
@@ -78,8 +80,8 @@
           <!-- Grid rows pair the exchange: the challenger's attack sits beside the
                block the opponent answered it with, and vice versa below. -->
           <div class="rp__cols">
-            <div class="rp__name" style={beltChipStyle(fight.challenger.belt)}>{fight.challenger.display_name}</div>
-            <div class="rp__name" style={beltChipStyle(fight.opponent.belt)}>{fight.opponent.display_name}</div>
+            <a class="rp__name" style={beltChipStyle(fight.challenger.belt)} href={fight.challenger.url}>{fight.challenger.display_name}</a>
+            <a class="rp__name" style={beltChipStyle(fight.opponent.belt)} href={fight.opponent.url}>{fight.opponent.display_name}</a>
 
             <div class="rp__move" class:rp__move--good={cAttackLanded}>
               <MoveIcon kind="attack" height={cMove.attack_height} style={cMove.attack_style} size={26} />
@@ -173,6 +175,17 @@
     min-width: 8rem;
   }
 
+  .corner__link {
+    display: block;
+    text-decoration: none;
+    color: inherit;
+  }
+
+  .corner__link:hover .corner__name {
+    color: var(--kfm-belt-red, #b83d3d);
+    text-decoration: underline;
+  }
+
   .corner__rect {
     width: 72px;
     height: 96px;
@@ -250,6 +263,11 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    text-decoration: none;
+  }
+
+  .rp__name:hover {
+    filter: brightness(1.15);
   }
 
   .rp__move {
