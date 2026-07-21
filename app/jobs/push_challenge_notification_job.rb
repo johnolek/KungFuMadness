@@ -2,6 +2,9 @@
 # in their inbox. Enqueued from the Fight create broadcast for human opponents;
 # bots never have subscriptions. No-ops cleanly if the fight vanished, is no
 # longer pending, or the opponent has no subscriptions, so it is safe to retry.
+# Held back until the opponent's pending pile reaches their configured
+# push_min_pending_challenges, so a user can choose to be pinged only once
+# challenges stack up.
 class PushChallengeNotificationJob < ApplicationJob
   queue_as :default
 
@@ -12,6 +15,7 @@ class PushChallengeNotificationJob < ApplicationJob
 
     opponent = fight.opponent
     return if opponent.bot? || opponent.user_id.nil?
+    return if opponent.incoming_challenges.count < opponent.user.push_min_pending_challenges
 
     subscriptions = PushSubscription.where(user_id: opponent.user_id)
     return if subscriptions.none?

@@ -10,6 +10,8 @@ class User < ApplicationRecord
   validates :email, presence: true, on: :create
   validates :email, format: { with: URI::MailTo::EMAIL_REGEXP },
                     uniqueness: { case_sensitive: false }, allow_nil: true
+  validates :push_min_pending_challenges,
+            numericality: { only_integer: true, in: 1..1000 }
 
   # Signed, expiring token for the email magic-link sign-in. In this email-first
   # app the same link also proves the address on first use (see the sign-in

@@ -27,6 +27,20 @@ RSpec.describe User, type: :model do
     expect(build(:user, email: nil)).not_to be_valid
   end
 
+  describe "push_min_pending_challenges" do
+    it "defaults to 3" do
+      expect(subject.push_min_pending_challenges).to eq(3)
+    end
+
+    it "allows 1 through 1000" do
+      expect(build(:user, push_min_pending_challenges: 1)).to be_valid
+      expect(build(:user, push_min_pending_challenges: 1000)).to be_valid
+      expect(build(:user, push_min_pending_challenges: 0)).not_to be_valid
+      expect(build(:user, push_min_pending_challenges: 1001)).not_to be_valid
+      expect(build(:user, push_min_pending_challenges: 2.5)).not_to be_valid
+    end
+  end
+
   describe "email verification state" do
     it "starts unverified" do
       expect(subject.email_verified?).to be(false)

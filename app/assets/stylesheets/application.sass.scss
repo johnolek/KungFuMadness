@@ -399,6 +399,17 @@ a {
 
 .online-marker { color: var(--kfm-belt-green); }
 
+.push-threshold {
+  display: block;
+  margin-top: 0.5rem;
+  color: var(--kfm-ink-soft);
+
+  input {
+    width: 4.5rem;
+    text-align: center;
+  }
+}
+
 .fight-settled {
   color: var(--kfm-ink-soft);
   font-size: 0.85rem;

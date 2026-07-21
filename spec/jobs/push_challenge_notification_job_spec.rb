@@ -15,7 +15,7 @@ RSpec.describe PushChallengeNotificationJob, type: :job do
   end
 
   let(:challenger) { create(:fighter, name: "PepsiDad", belt: 3, xp: 800) }
-  let(:opponent_user) { create(:user) }
+  let(:opponent_user) { create(:user, push_min_pending_challenges: 1) }
   let(:opponent) { opponent_user.fighter }
 
   before { allow(WebPush).to receive(:payload_send) }
@@ -61,5 +61,40 @@ RSpec.describe PushChallengeNotificationJob, type: :job do
   it "no-ops cleanly on a missing fight" do
     expect { described_class.perform_now(-1) }.not_to raise_error
     expect(WebPush).not_to have_received(:payload_send)
+  end
+
+  describe "minimum pending challenges threshold" do
+    before { create(:push_subscription, user: opponent_user) }
+
+    it "holds the push while pending challenges are below the user's threshold" do
+      opponent_user.update!(push_min_pending_challenges: 3)
+      fight = challenge(challenger: challenger, opponent: opponent)
+
+      described_class.perform_now(fight.id)
+
+      expect(WebPush).not_to have_received(:payload_send)
+    end
+
+    it "delivers once pending challenges reach the threshold" do
+      opponent_user.update!(push_min_pending_challenges: 3)
+      challenge(challenger: challenger, opponent: opponent)
+      challenge(challenger: create(:fighter, name: "Iron Palm"), opponent: opponent)
+      fight = challenge(challenger: create(:fighter, name: "Silent Crane"), opponent: opponent)
+
+      described_class.perform_now(fight.id)
+
+      expect(WebPush).to have_received(:payload_send).once
+    end
+
+    it "counts only still-pending challenges toward the threshold" do
+      opponent_user.update!(push_min_pending_challenges: 2)
+      declined = challenge(challenger: create(:fighter, name: "Iron Palm"), opponent: opponent)
+      declined.decline!
+      fight = challenge(challenger: challenger, opponent: opponent)
+
+      described_class.perform_now(fight.id)
+
+      expect(WebPush).not_to have_received(:payload_send)
+    end
   end
 end

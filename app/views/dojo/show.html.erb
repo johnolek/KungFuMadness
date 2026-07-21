@@ -42,6 +42,11 @@
       <p class="stat-line" data-push-status>Get a notification the moment someone challenges you.</p>
       <button type="button" class="btn-kfm btn-kfm--sm" data-push-enable hidden>Enable notifications</button>
       <button type="button" class="btn-kfm btn-kfm--sm" data-push-disable hidden>Disable</button>
+      <label class="push-threshold" data-push-threshold-row hidden>
+        Notify only when my pending challenges reach
+        <input type="number" inputmode="numeric" min="1" max="1000" step="1"
+               value="<%= current_user.push_min_pending_challenges %>" data-push-threshold>
+      </label>
     </div>
   <% end %>
 <% else %>

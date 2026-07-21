@@ -64,6 +64,7 @@ function render(panel, state) {
   const status = panel.querySelector("[data-push-status]")
   const enable = panel.querySelector("[data-push-enable]")
   const disable = panel.querySelector("[data-push-disable]")
+  const thresholdRow = panel.querySelector("[data-push-threshold-row]")
 
   const messages = {
     on: "Notifications on — you'll be pinged when someone challenges you.",
@@ -74,6 +75,46 @@ function render(panel, state) {
   if (status) status.textContent = messages[state] || messages.off
   if (enable) enable.hidden = state !== "off"
   if (disable) disable.hidden = state !== "on"
+  if (thresholdRow) thresholdRow.hidden = state !== "on"
+}
+
+function toast(type, message) {
+  document.dispatchEvent(new CustomEvent("toast", { detail: { type, message } }))
+}
+
+// Save the minimum-pending-challenges threshold when the input settles. Clamped
+// client-side to the input's own 1..1000 bounds; the server validates too.
+function initThreshold(panel) {
+  const input = panel.querySelector("[data-push-threshold]")
+  if (!input) return
+
+  let saved = input.value
+
+  input.addEventListener("change", async () => {
+    const value = Math.min(1000, Math.max(1, Math.round(Number(input.value) || 1)))
+    input.value = value
+    if (String(value) === saved) return
+
+    try {
+      const response = await fetch("/push_settings", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+          "X-CSRF-Token": metaContent("csrf-token")
+        },
+        body: JSON.stringify({ min_pending_challenges: value })
+      })
+      if (!response.ok) throw new Error("save failed")
+      saved = String(value)
+      toast("notice", value === 1
+        ? "You'll be notified of every challenge."
+        : `You'll be notified once ${value} challenges are pending.`)
+    } catch (e) {
+      input.value = saved
+      toast("alert", "Couldn't save your notification setting.")
+    }
+  })
 }
 
 async function enable(panel) {
@@ -127,6 +168,7 @@ async function initPanel() {
   const disableBtn = panel.querySelector("[data-push-disable]")
   enableBtn?.addEventListener("click", () => enable(panel).catch(() => render(panel, "off")))
   disableBtn?.addEventListener("click", () => disable(panel).catch(() => render(panel, "on")))
+  initThreshold(panel)
 
   try {
     const reg = await ensureRegistration()
