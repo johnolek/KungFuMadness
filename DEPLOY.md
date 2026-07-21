@@ -213,6 +213,32 @@ image installs `curl` and declares its own `HEALTHCHECK` against `/up`. If the
 container is reported unhealthy, the real cause is in the container logs (as
 above), not the healthcheck mechanism.
 
+**Jobs seem enqueued but nothing runs / no fights are happening.** Run the
+one-command health snapshot in the app container (Coolify → Terminal):
+
+```bash
+bin/rails kfm:doctor
+```
+
+It prints the Solid Queue process registry (supervisor / dispatcher / worker /
+scheduler + heartbeats), pending/finished/FAILED job counts, and the bot-world
+activity numbers. How to read it:
+
+- **No processes registered** → the supervisor isn't running inside Puma. The
+  image bakes `SOLID_QUEUE_IN_PUMA=1`; grep the container logs for
+  `Started Supervisor` / `Started Worker` and make sure nothing in Coolify
+  overrides the start command or that env var.
+- **Stale heartbeats or FAILED executions** → jobs are erroring; the doctor
+  prints the last failure's error.
+- **Everything healthy but 0 resolved fights** → almost certainly just the
+  cold-start ramp. Bots trickle online a few per minute (steady state is only
+  reached after ~15–30 minutes), only ~2% of online bots look for a fight each
+  minute, and bots answer challenges only **while online**, after a 1–12 minute
+  persona delay — so a challenge you send to an offline bot can legitimately sit
+  for hours. Expect the first bot-vs-bot fights ~10–30 minutes after first boot,
+  then roughly one every few minutes. (Dev feels faster only because
+  `immediate_response` is on there.)
+
 **Build fails on `SecretsUsedInArgOrEnv`.** Already handled: the Dockerfile's
 check directive skips that single lint rule (the `RAILS_MASTER_KEY` build ARG is
 the standard Rails/Coolify shape). If you see it, you're building a stale

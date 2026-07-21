@@ -30,4 +30,45 @@ namespace :kfm do
 
     puts "kfm:bootstrap — done."
   end
+
+  desc "Health snapshot of the living world: Solid Queue processes, job counts, " \
+       "failures, and bot-world activity. Run in the production container when " \
+       "the dojo looks quiet."
+  task doctor: :environment do
+    heartbeat_cutoff = 5.minutes.ago
+    processes = SolidQueue::Process.pluck(:kind, :last_heartbeat_at)
+
+    puts "== Solid Queue =="
+    if processes.empty?
+      puts "NO PROCESSES REGISTERED — the supervisor is not running."
+      puts "Check that SOLID_QUEUE_IN_PUMA=1 reaches Puma and grep the container"
+      puts "logs for 'Started Supervisor' / 'Started Worker'."
+    else
+      processes.each do |kind, beat|
+        stale = beat < heartbeat_cutoff ? "  << STALE (dead?)" : ""
+        puts "#{kind}: heartbeat #{beat.iso8601}#{stale}"
+      end
+    end
+
+    pending = SolidQueue::Job.where(finished_at: nil).group(:class_name).count
+    finished = SolidQueue::Job.where.not(finished_at: nil).count
+    failed = SolidQueue::FailedExecution.count
+    puts "pending jobs: #{pending.inspect}"
+    puts "finished jobs (since last hourly clear): #{finished}"
+    puts "FAILED executions: #{failed}"
+    if failed.positive?
+      last = SolidQueue::FailedExecution.order(:created_at).last
+      puts "  last failure (#{last.job.class_name}): #{last.error.inspect[0, 500]}"
+    end
+
+    puts "\n== Bot world =="
+    puts "bots: #{Fighter.bots.count} (roster) / online now: #{Fighter.online.count}"
+    puts "fights: #{Fight.pending.count} pending, #{Fight.resolved.count} resolved " \
+         "(#{Fight.resolved.where(resolved_at: 1.hour.ago..).count} in the last hour)"
+    puts "last resolved: #{Fight.recently_resolved.first&.resolved_at&.iso8601 || 'never'}"
+    puts "\nNOTE: from a cold start the world ramps up slowly — bots trickle online"
+    puts "(a few per minute) and only answer challenges while online, after their"
+    puts "1-12 min persona delay. Expect the first bot-vs-bot fights ~10-30 minutes"
+    puts "after first boot, settling into one every few minutes."
+  end
 end
