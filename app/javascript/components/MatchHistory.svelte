@@ -1,12 +1,14 @@
 <script>
-  // The homepage "Your match history" table, live: seeded with server rows and
-  // prepending in real time when a FighterChannel challenge_resolved broadcast
-  // (relayed as `kfm:fighter`) lands. Uses the global stat-table styling so it
-  // reads identically to the ERB history tables on profiles.
+  // THE match-history table — dojo homepage, profiles, and challenge scouting
+  // panels all mount this island, so every history surface is live: rows are
+  // seeded from Fight#history_row_payload and new ones prepend when a DojoChannel
+  // fight_resolved broadcast (relayed as `kfm:dojo`) involves `fighterId`, read
+  // from that fighter's perspective. Global stat-table/move-set styling keeps it
+  // identical everywhere.
   import MoveIcon from "./MoveIcon.svelte"
   import { beltChipStyle } from "./belt.js"
 
-  let { fights: initial = [], youId } = $props()
+  let { fights: initial = [], fighterId, showXp = true, emptyMessage = null } = $props()
 
   const RESULT_LABEL = { win: "Won", loss: "Lost", draw: "Draw" }
 
@@ -15,8 +17,8 @@
 
   function rowFromTicker(fight) {
     const mineSide =
-      fight.challenger?.id === youId ? "challenger"
-      : fight.opponent?.id === youId ? "opponent"
+      fight.challenger?.id === fighterId ? "challenger"
+      : fight.opponent?.id === fighterId ? "opponent"
       : null
     if (!mineSide) return null
     const mine = fight[mineSide]
@@ -39,23 +41,33 @@
   $effect(() => {
     const handler = (event) => {
       const message = event.detail
-      if (message?.event !== "challenge_resolved" || !message.fight) return
+      if (message?.event !== "fight_resolved" || !message.fight) return
       const row = rowFromTicker(message.fight)
       if (!row || fights.some((f) => f.id === row.id)) return
       fights = [row, ...fights]
     }
-    document.addEventListener("kfm:fighter", handler)
-    return () => document.removeEventListener("kfm:fighter", handler)
+    document.addEventListener("kfm:dojo", handler)
+    return () => document.removeEventListener("kfm:dojo", handler)
   })
 </script>
 
 {#if fights.length === 0}
-  <p>No fights on record yet. <a href="/fighters">Find an opponent</a>.</p>
+  {#if emptyMessage}
+    <p>{emptyMessage}</p>
+  {:else}
+    <p>No fights on record yet. <a href="/fighters">Find an opponent</a>.</p>
+  {/if}
 {:else}
   <div class="table-scroll">
     <table class="stat-table">
       <thead>
-        <tr><th>Opponent</th><th>Moves</th><th>Result</th><th>XP</th><th></th></tr>
+        <tr>
+          <th>Opponent</th>
+          <th>Moves</th>
+          <th>Result</th>
+          {#if showXp}<th>XP</th>{/if}
+          <th></th>
+        </tr>
       </thead>
       <tbody>
         {#each fights as row (row.id)}
@@ -82,11 +94,13 @@
             <td>
               <span class="result-{row.result}">{RESULT_LABEL[row.result]}{row.ko ? " (KO)" : ""}</span>
             </td>
-            <td>
-              {#if row.xp_delta !== null && row.xp_delta !== undefined}
-                <span class={row.xp_delta >= 0 ? "xp-up" : "xp-down"}>{row.xp_delta}</span>
-              {/if}
-            </td>
+            {#if showXp}
+              <td>
+                {#if row.xp_delta !== null && row.xp_delta !== undefined}
+                  <span class={row.xp_delta >= 0 ? "xp-up" : "xp-down"}>{row.xp_delta}</span>
+                {/if}
+              </td>
+            {/if}
             <td><a href={row.url}>Watch</a></td>
           </tr>
         {/each}

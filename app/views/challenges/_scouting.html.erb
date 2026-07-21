@@ -1,13 +1,12 @@
 <%# Pre-commit scouting panel: raw match history ONLY — no tendency digests.
     Locals: scout (the fighter being sized up), recent_fights (their most recent
-    resolved fights). Reading patterns out of these is the player's job. %>
+    resolved fights, fight_moves preloaded). Reading patterns out of these is the
+    player's job. Mounts the live MatchHistory island so it updates in place. %>
 <div class="panel-kfm">
   <div class="panel-kfm-title">Scouting: <%= fighter_display_name(scout) %></div>
-  <% if recent_fights.any? %>
-    <%= render "fights/history_table", fighter: scout, fights: recent_fights %>
-    <p class="stat-line"><%= link_to "Full history →", fighter_path(scout) %></p>
-  <% else %>
-    <p>No fights on record yet — you're stepping into the unknown.
-       <%= link_to "Full history →", fighter_path(scout) %></p>
-  <% end %>
+  <div data-svelte-component="MatchHistory"
+       data-props="<%= { fights: recent_fights.map { |f| f.history_row_payload(viewer: scout) },
+                         fighterId: scout.id, showXp: false,
+                         emptyMessage: "No fights on record yet — you're stepping into the unknown." }.to_json %>"></div>
+  <p class="stat-line"><%= link_to "Full history →", fighter_path(scout) %></p>
 </div>

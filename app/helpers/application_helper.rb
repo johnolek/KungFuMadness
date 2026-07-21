@@ -73,52 +73,6 @@ module ApplicationHelper
     link_to fighter_name_chip(fighter, belt: belt), fighter_path(fighter), class: "belt-link"
   end
 
-  # Zone baselines shared with the Svelte MoveIcon — keep the two in sync.
-  MOVE_ICON_ZONE_Y = { 3 => 3, 2 => 15, 1 => 31 }.freeze
-
-  # A chunky inline-SVG glyph for one committed move, mirroring
-  # MoveIcon.svelte: a stick figure with a red strike marker (kick wedge /
-  # punch fist) or a blue guard bar at the low/mid/high zone.
-  #
-  # @param kind [Symbol] :attack or :block
-  # @param height [Integer] 1 low, 2 mid, 3 high
-  # @param style [Integer] 0 kick, 1 punch (attacks only)
-  # @param size [Integer] rendered width in px
-  # @return [ActiveSupport::SafeBuffer]
-  def move_icon(kind:, height:, style: 0, size: 16)
-    y = MOVE_ICON_ZONE_Y.fetch(height.to_i, 15)
-    marker =
-      if kind == :attack
-        tip = if style.to_i.zero?
-          %(<polygon points="7,#{y} 16,#{y + 4} 7,#{y + 9}"/>)
-        else
-          %(<rect x="8" y="#{y + 1}" width="7" height="7"/>)
-        end
-        %(<g fill="var(--kfm-belt-red)"><rect x="0" y="#{y + 3}" width="9" height="3"/>#{tip}</g>)
-      else
-        %(<rect x="11" y="#{y + 1}" width="20" height="6" fill="var(--kfm-belt-blue)"/>)
-      end
-
-    <<~SVG.html_safe
-      <svg viewBox="0 0 36 44" width="#{size.to_i}" height="#{(size.to_i * 44.0 / 36).round}" aria-hidden="true"><g fill="currentColor" opacity="0.8"><rect x="17" y="1" width="8" height="8"/><rect x="18" y="10" width="6" height="16"/><rect x="14" y="12" width="14" height="3"/><rect x="17" y="27" width="3" height="15"/><rect x="22" y="27" width="3" height="15"/></g>#{marker}</svg>
-    SVG
-  end
-
-  # A fight's move tuples ({Fight#scouting_moves_for}) as two stacked glyph
-  # rows — attacks over blocks — so a table column scans horizontally across
-  # the rounds.
-  #
-  # @param moves [Array<Array(Integer, Integer, Integer)>]
-  # @return [ActiveSupport::SafeBuffer]
-  def move_glyphs(moves)
-    attacks = safe_join(moves.map { |height, style, _| move_icon(kind: :attack, height: height, style: style) })
-    blocks = safe_join(moves.map { |_, _, height| move_icon(kind: :block, height: height) })
-    content_tag(:span, class: "move-set") do
-      content_tag(:span, attacks, class: "move-set__row") +
-        content_tag(:span, blocks, class: "move-set__row")
-    end
-  end
-
   # The current-form callout, e.g. "3-fight win streak" — nil when there's no
   # history to describe.
   #

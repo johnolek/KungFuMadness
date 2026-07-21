@@ -16,7 +16,7 @@
   <div class="panel-kfm">
     <div class="panel-kfm-title">Your match history</div>
     <div data-svelte-component="MatchHistory"
-         data-props="<%= { fights: @history_rows, youId: current_fighter.id }.to_json %>"></div>
+         data-props="<%= { fights: @history_rows, fighterId: current_fighter.id }.to_json %>"></div>
 
     <% if @history_total_pages > 1 %>
       <div class="page-nav">

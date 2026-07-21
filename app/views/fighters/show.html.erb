@@ -60,9 +60,11 @@
 <% else %>
   <div class="panel-kfm">
     <div class="panel-kfm-title">Match history</div>
-    <% if @history.any? %>
-      <%= render "fights/history_table", fighter: @fighter, fights: @history, show_xp: true %>
+    <div data-svelte-component="MatchHistory"
+         data-props="<%= { fights: @history_rows, fighterId: @fighter.id,
+                           emptyMessage: "No fights on record yet." }.to_json %>"></div>
 
+    <% if @total_pages > 1 %>
       <div class="page-nav">
         <% if @page > 1 %>
           <%= link_to "← Newer", fighter_path(@fighter, page: @page - 1), class: "btn-kfm" %>
@@ -76,8 +78,6 @@
           <span class="btn-kfm is-disabled">Older →</span>
         <% end %>
       </div>
-    <% else %>
-      <p>No fights on record yet.</p>
     <% end %>
   </div>
 <% end %>

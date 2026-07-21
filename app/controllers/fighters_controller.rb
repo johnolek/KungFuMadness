@@ -16,12 +16,14 @@ class FightersController < ApplicationController
     @own_profile = current_fighter == @fighter
 
     # Scoutable match history is for sizing up OTHER fighters — your own lives on
-    # the dojo homepage.
+    # the dojo homepage. Rows feed the live MatchHistory island.
     unless @own_profile
       history = @fighter.resolved_fights.includes(:challenger, :opponent, :fight_moves)
       @total_pages = [ (history.count / HISTORY_PER_PAGE.to_f).ceil, 1 ].max
       @page = params[:page].to_i.clamp(1, @total_pages)
-      @history = history.offset((@page - 1) * HISTORY_PER_PAGE).limit(HISTORY_PER_PAGE)
+      @history_rows = history.offset((@page - 1) * HISTORY_PER_PAGE)
+                             .limit(HISTORY_PER_PAGE)
+                             .map { |fight| fight.history_row_payload(viewer: @fighter) }
     end
 
     @pending_count = @fighter.incoming_challenges.count + @fighter.outgoing_challenges.count

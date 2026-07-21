@@ -206,15 +206,17 @@ rosters, feeds, tables, inbox, or the modal.
 **Leaderboard** — `GET /leaderboard` shows one board: top-25 all-time XP, humans
 and bots together. (The most-active-this-week board was removed.)
 
-**Match history home** — YOUR paginated history lives on the dojo homepage
-(`DojoController`, `?page=`) as the LIVE `MatchHistory.svelte` island: seeded
-with `Fight#history_row_payload(viewer:)` rows and prepending in real time from
-FighterChannel `challenge_resolved` broadcasts (`ticker_payload` now carries
-per-side moves + XP deltas for this). Your own profile shows none; other
-fighters' profiles keep the ERB table (the scouting surface). No history table
-shows dates — the fight page carries the "Settled …" stamp. Moves columns are
-two stacked glyph rows (attacks over blocks) so patterns scan horizontally.
-Profiles also show "Online now" / "Last online N ago" from `last_seen_at`.
+**Match history** — every history surface (dojo homepage, other fighters'
+profiles, the challenge/respond scouting panels) mounts the same LIVE
+`MatchHistory.svelte` island: seeded with `Fight#history_row_payload(viewer:)`
+rows from the subject fighter's perspective and prepending in real time from the
+public DojoChannel `fight_resolved` broadcast (`ticker_payload` carries per-side
+moves + XP deltas for this). Your own history lives on the homepage, not your
+profile. No history table shows dates — the fight page carries the "Settled …"
+stamp. Moves columns are two stacked glyph rows (attacks over blocks) so
+patterns scan horizontally; the old `_history_table` partial and
+`move_icon`/`move_glyphs` ERB helpers are gone. Profiles also show "Online now"
+/ "Last online N ago" from `last_seen_at`.
 
 **iOS** — every interactive element gets `touch-action: manipulation`, inputs
 are 16px, and the viewport pins `maximum-scale=1`, so taps are instant and
