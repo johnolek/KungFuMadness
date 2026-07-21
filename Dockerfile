@@ -1,5 +1,8 @@
 # syntax=docker/dockerfile:1
-# check=error=true
+# check=error=true;skip=SecretsUsedInArgOrEnv
+# (RAILS_MASTER_KEY rides through a build ARG — the standard Rails Dockerfile
+# shape, and what Coolify injects. BuildKit's SecretsUsedInArgOrEnv lint would
+# fail the whole build under check=error, so that single rule is skipped.)
 
 # Production image for Coolify (Dockerfile build). JS (esbuild + esbuild-svelte)
 # and CSS (dart-sass) compile via yarn during assets:precompile in the build
