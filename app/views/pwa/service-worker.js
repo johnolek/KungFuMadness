@@ -1,11 +1,38 @@
 // Kung Fu Madness service worker.
-// cache-version: 2 — bump this comment on every change so browsers refetch the SW.
+// cache-version: 3 — bump CACHE_NAME on every change so browsers refetch the SW.
 //
-// Web Push handling only for now (no offline caching yet). Registered at root
-// scope from app/javascript/push.js so it controls the whole app.
+// Registered at root scope from app/javascript/push.js so it controls the
+// whole app. Handles Web Push and a minimal offline fallback: navigations go
+// network-first and fall back to a cached /offline.html when the dojo is
+// unreachable. No other requests are intercepted.
 
-self.addEventListener("install", () => self.skipWaiting())
-self.addEventListener("activate", (event) => event.waitUntil(self.clients.claim()))
+const CACHE_NAME = "kfm-v3"
+const OFFLINE_URL = "/offline.html"
+const PRECACHE = [OFFLINE_URL, "/icon-192.png"]
+
+self.addEventListener("install", (event) => {
+  event.waitUntil(
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE)).then(() => self.skipWaiting())
+  )
+})
+
+self.addEventListener("activate", (event) => {
+  event.waitUntil(
+    caches.keys()
+      .then((names) => Promise.all(names.filter((n) => n !== CACHE_NAME).map((n) => caches.delete(n))))
+      .then(() => self.clients.claim())
+  )
+})
+
+self.addEventListener("fetch", (event) => {
+  if (event.request.mode !== "navigate") return
+
+  event.respondWith(
+    fetch(event.request).catch(() =>
+      caches.match(OFFLINE_URL).then((cached) => cached || Response.error())
+    )
+  )
+})
 
 // A challenge push arrives as JSON: { title, body, url }. Fall back gracefully
 // if a push ever arrives with no data payload.
@@ -21,6 +48,8 @@ self.addEventListener("push", (event) => {
   const options = {
     body: data.body || "Someone challenges you.",
     tag: "kfm-challenge",
+    icon: "/icon-192.png",
+    badge: "/badge.png",
     data: { url: data.url || "/" }
   }
 

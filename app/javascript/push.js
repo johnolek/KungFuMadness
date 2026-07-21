@@ -11,6 +11,13 @@ const SUPPORTED =
 
 let registration = null
 
+// Register the service worker for every visitor (not just push subscribers):
+// it powers installability, the offline fallback, and notification handling.
+function registerServiceWorker() {
+  if (!("serviceWorker" in navigator)) return
+  ensureRegistration().catch(() => {})
+}
+
 function metaContent(name) {
   return document.querySelector(`meta[name="${name}"]`)?.content || ""
 }
@@ -130,6 +137,11 @@ async function initPanel() {
   }
 }
 
-document.addEventListener("turbo:load", initPanel)
-if (document.readyState !== "loading") initPanel()
-else document.addEventListener("DOMContentLoaded", initPanel)
+function init() {
+  registerServiceWorker()
+  initPanel()
+}
+
+document.addEventListener("turbo:load", init)
+if (document.readyState !== "loading") init()
+else document.addEventListener("DOMContentLoaded", init)

@@ -49,9 +49,12 @@ Rails.application.routes.draw do
   delete "push_subscriptions", to: "push_subscriptions#destroy"
 
   # PWA: dynamic manifest + service worker (the SW must be same-origin at root
-  # scope to control the whole app). Rendered from app/views/pwa/*.
-  get "manifest", to: "rails/pwa#manifest", as: :pwa_manifest
-  get "service-worker", to: "rails/pwa#service_worker", as: :pwa_service_worker
+  # scope to control the whole app). Rendered from app/views/pwa/*. The pinned
+  # formats keep template lookup working when browsers send Accept headers
+  # Rails treats as browser-generated (Chrome's manifest fetch otherwise
+  # negotiates to :html and 500s on the missing template).
+  get "manifest", to: "rails/pwa#manifest", as: :pwa_manifest, defaults: { format: :json }
+  get "service-worker", to: "rails/pwa#service_worker", as: :pwa_service_worker, defaults: { format: :js }
 
   # Reveal health status on /up that returns 200 if the app boots with no exceptions, otherwise 500.
   get "up" => "rails/health#show", as: :rails_health_check

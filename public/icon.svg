@@ -1,3 +1,9 @@
-<svg width="512" height="512" xmlns="http://www.w3.org/2000/svg">
-  <circle cx="256" cy="256" r="256" fill="red"/>
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <rect width="512" height="512" fill="#f4e4bc"/>
+  <rect x="14" y="14" width="484" height="484" fill="none" stroke="#1a1108" stroke-width="12"/>
+  <rect x="34" y="34" width="444" height="444" fill="none" stroke="#b83d3d" stroke-width="6"/>
+  <circle cx="256" cy="238" r="150" fill="#b83d3d"/>
+  <text x="256" y="300" text-anchor="middle" font-family="Hiragino Mincho ProN, Hiragino Sans, sans-serif" font-size="230" font-weight="800" fill="#1a1108">拳</text>
+  <rect x="60" y="408" width="392" height="44" fill="#1a1108"/>
+  <text x="256" y="441" text-anchor="middle" font-family="Courier New, monospace" font-size="34" font-weight="700" letter-spacing="6" fill="#f4e4bc">KUNG FU</text>
 </svg>

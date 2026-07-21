@@ -59,18 +59,33 @@ Read from ENV (all optional in dev, which has sane fallbacks):
   `bin/rails push:generate_vapid`. Config lives in `config/initializers/web_push.rb`
   (the `Push` module: `Push.configured?`, `Push.public_key`, `Push.vapid_details`).
 
-## PWA push notifications
+## Installable PWA + push notifications
+
+The app is an installable PWA. `app/views/pwa/manifest.json.erb` carries the
+full manifest (name/short_name, standalone display, parchment theme colors,
+192/512/maskable icons); its route — and the service worker's — pin `defaults:
+{ format: }` because Chrome's manifest fetch sends a browser-like Accept header
+that Rails otherwise negotiates to `:html`, 500ing on template lookup
+(regression-covered in `spec/requests/pwa_spec.rb`). Icons live in `public/`
+(`icon.png` 512, `icon-192.png`, `icon-maskable.png` with safe-zone padding,
+`apple-touch-icon.png` 180, `badge.png` monochrome notification badge), all
+rendered from `public/icon.svg` (拳 on a rising sun over parchment). The layout
+sets `theme-color` + the apple-mobile-web-app metas. `push.js` registers the
+service worker for EVERY visitor on load (installability + offline), not just
+push subscribers. The SW (cache `kfm-v3` — bump on change) precaches
+`/offline.html` and serves it when a navigation fails offline; it intercepts
+nothing else.
 
 Opt-in system push when a challenge lands. Flow: the dojo renders a "Challenge
 alerts" panel + a `vapid-public-key` meta tag (verified fighters only, gated on
-`Push.configured?`); `app/javascript/push.js` registers the service worker
-(`/service-worker`, served by `rails/pwa`), subscribes via the Push API, and
+`Push.configured?`); `app/javascript/push.js` subscribes via the Push API and
 POST/DELETEs `PushSubscription`s (unique by endpoint, one row per browser). On a
 new challenge `Fight#broadcast_challenge_received` enqueues
 `PushChallengeNotificationJob` for human opponents (never bots); the job fans out
 to each subscription via `PushSubscription#deliver`, which prunes gone (404/410)
 subscriptions. The service worker's `push` / `notificationclick` handlers show
-the notification and focus/open the dojo. iOS requires add-to-home-screen.
+the notification (with app icon + badge) and focus/open the dojo. iOS requires
+add-to-home-screen before push can be enabled.
 
 ## Bot ecology (the living population)
 
