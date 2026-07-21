@@ -189,6 +189,9 @@ a {
   }
 }
 
+// Island wrapper dissolves so the badges sit in the nav's flex row directly.
+.kfm-nav-badges { display: contents; }
+
 // The Sign out control, styled to read as a nav link (button_to renders a button).
 .kfm-nav-inline {
   font-family: inherit;

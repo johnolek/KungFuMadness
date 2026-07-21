@@ -71,5 +71,26 @@ RSpec.describe "Dojo", type: :request do
       expect(response.body).to include("Incoming Foe")
       expect(response.body).to include('data-svelte-component="Inbox"')
     end
+
+    it "seeds the nav badges island with pending challenge ids" do
+      user = create(:user)
+      sign_in_as(user)
+      me = user.fighter
+      incoming = Fight.create_challenge!(
+        challenger: create(:fighter), opponent: me,
+        moves: (1..3).map { |r| { round: r, attack_height: 2, attack_style: 0, block_height: 2 } }
+      )
+
+      get root_path
+
+      expect(response.body).to include('data-svelte-component="NavBadges"')
+      expect(response.body).to include("incomingIds&quot;:[#{incoming.id}]")
+    end
+
+    it "renders no nav badges island for signed-out visitors" do
+      get root_path
+
+      expect(response.body).not_to include("NavBadges")
+    end
   end
 end

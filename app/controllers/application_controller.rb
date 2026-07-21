@@ -29,6 +29,10 @@ class ApplicationController < ActionController::Base
                                   .limit(SIDEBAR_RECENT_LIMIT)
                                   .map(&:ticker_payload)
     @sidebar_online = build_online_sidebar(current_fighter)
+    # Seeded as id lists (not counts) so the nav badges can dedupe live cable
+    # events against what the server already counted.
+    @nav_incoming_ids = current_fighter.incoming_challenges.ids
+    @nav_outgoing_ids = current_fighter.outgoing_challenges.ids
   end
 
   # One row per online-or-recently-offline fighter — including yourself, slotted

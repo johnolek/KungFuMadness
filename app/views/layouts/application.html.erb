@@ -38,6 +38,11 @@
           <% if current_fighter %>
             <%= link_to "My Profile", fighter_path(current_fighter) %>
           <% end %>
+          <% if living_world? %>
+            <div class="kfm-nav-badges"
+                 data-svelte-component="NavBadges"
+                 data-props="<%= { incomingIds: @nav_incoming_ids, outgoingIds: @nav_outgoing_ids }.to_json %>"></div>
+          <% end %>
           <%= button_to "Sign out", logout_path, method: :delete, class: "kfm-nav-inline" %>
         <% else %>
           <%= link_to "Sign in", login_path %>
