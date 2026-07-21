@@ -456,6 +456,7 @@ a {
 .result-win { color: var(--kfm-belt-green); font-weight: bold; }
 .result-loss { color: var(--kfm-belt-red); font-weight: bold; }
 .result-draw { color: var(--kfm-ink-soft); font-weight: bold; }
+.result-masked { color: var(--kfm-ink-soft); font-weight: bold; letter-spacing: 0.15em; }
 
 .xp-up::before { content: "+"; }
 .xp-up { color: var(--kfm-belt-green); }

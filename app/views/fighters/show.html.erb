@@ -62,6 +62,8 @@
     <div class="panel-kfm-title">Match history</div>
     <div data-svelte-component="MatchHistory"
          data-props="<%= { fights: @history_rows, fighterId: @fighter.id,
+                           viewerId: current_fighter&.id,
+                           hideSpoilers: current_user ? current_user.hide_fight_spoilers : false,
                            emptyMessage: "No fights on record yet." }.to_json %>"></div>
 
     <% if @total_pages > 1 %>
@@ -104,6 +106,10 @@
       <label class="prefs-row">
         <%= form.check_box :allow_bot_challenges, checked: current_user.allow_bot_challenges %>
         Allow challenges from bots
+      </label>
+      <label class="prefs-row">
+        <%= form.check_box :hide_fight_spoilers, checked: current_user.hide_fight_spoilers %>
+        Hide results of my fights until I watch them
       </label>
       <button type="submit" class="btn-kfm btn-kfm--sm">Save</button>
     <% end %>

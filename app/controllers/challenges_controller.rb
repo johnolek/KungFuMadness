@@ -168,7 +168,9 @@ class ChallengesController < ApplicationController
     }
   end
 
-  # Compact last-N resolved fights from +fighter+'s perspective for modal scouting.
+  # Compact last-N resolved fights from +fighter+'s perspective for modal
+  # scouting. Rows that would spoil the current fighter's own unwatched result
+  # come back masked, same as every other history surface.
   def scout_payload(fighter)
     scout_fights(fighter).map do |fight|
       as_challenger = fight.challenger_id == fighter.id
@@ -178,13 +180,15 @@ class ChallengesController < ApplicationController
       elsif fight.winner_id == fighter.id then "win"
       else "loss"
       end
+      masked = fight.spoiler_for?(current_fighter)
       {
         id: fight.id,
         opponent_name: other.display_name,
         opponent_belt: other_belt,
-        moves: fight.scouting_moves_for(fighter),
-        result: result,
-        ko: fight.ko,
+        moves: masked ? [] : fight.scouting_moves_for(fighter),
+        result: masked ? nil : result,
+        ko: masked ? nil : fight.ko,
+        masked: masked,
         url: fight_path(fight)
       }
     end

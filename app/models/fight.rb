@@ -251,15 +251,46 @@ class Fight < ApplicationRecord
         .count >= FARM_LIMIT
   end
 
+  # Whether +fighter+ has viewed this settled fight (participants only —
+  # spectators have nothing left to spoil, so they always count as having seen).
+  #
+  # @param fighter [Fighter, nil]
+  # @return [Boolean]
+  def seen_by?(fighter)
+    return true if fighter.nil?
+
+    if fighter.id == challenger_id then challenger_seen_at.present?
+    elsif fighter.id == opponent_id then opponent_seen_at.present?
+    else true
+    end
+  end
+
+  # Whether this fight's result must be hidden from +fighter+: their own resolved
+  # fight, not yet watched, and their user keeps spoilers off. Everything the
+  # server renders about a resolved fight should pass through this before showing
+  # a result to its viewer.
+  #
+  # @param fighter [Fighter, nil]
+  # @return [Boolean]
+  def spoiler_for?(fighter)
+    return false unless resolved?
+    return false if fighter.nil? || fighter.user.nil? || !fighter.user.hide_fight_spoilers
+
+    !seen_by?(fighter)
+  end
+
   # Compact resolved-fight line for the dojo ticker / recent-fights sidebar and
   # the live match-history prepend. Both sides' name + snapshot belt (plus their
   # now-public moves and XP delta), who won (nil = draw), whether it was a KO,
   # and a link to the playback. Shared by the initial server render and the live
-  # fight_resolved broadcast so both read identically.
+  # fight_resolved broadcast so both read identically. Pass +mask_for+ (the
+  # viewing fighter) on server renders so their own unwatched results come back
+  # masked; the public broadcast stays unmasked and clients mask their own rows.
   #
+  # @param mask_for [Fighter, nil]
   # @return [Hash]
-  def ticker_payload
-    {
+  def ticker_payload(mask_for: nil)
+    payload = {
       id: id,
       ko: ko,
       draw: winner_id.nil?,
@@ -271,14 +302,25 @@ class Fight < ApplicationRecord
       opponent: fighter_summary(opponent, belt: opponent_belt)
                   .merge(moves: scouting_moves_for(opponent), xp_delta: opponent_xp_delta)
     }
+    return payload unless spoiler_for?(mask_for)
+
+    payload.merge(
+      masked: true, ko: nil, draw: nil, winner_side: nil,
+      challenger: payload[:challenger].merge(moves: [], xp_delta: nil),
+      opponent: payload[:opponent].merge(moves: [], xp_delta: nil)
+    )
   end
 
   # One row of +viewer+'s match history, shaped for the homepage island (which
-  # also builds the same rows live from {ticker_payload} broadcasts).
+  # also builds the same rows live from {ticker_payload} broadcasts). +mask_for+
+  # is the fighter actually looking at the page (nil = anonymous): when the row
+  # is their own unwatched fight and they keep spoilers hidden, the result, KO,
+  # moves, and XP are stripped and the row carries +masked: true+.
   #
   # @param viewer [Fighter] whose perspective the row reads from
+  # @param mask_for [Fighter, nil] the fighter viewing the page
   # @return [Hash]
-  def history_row_payload(viewer:)
+  def history_row_payload(viewer:, mask_for: nil)
     as_challenger = challenger_id == viewer.id
     other = as_challenger ? opponent : challenger
     other_belt = as_challenger ? opponent_belt : challenger_belt
@@ -286,6 +328,21 @@ class Fight < ApplicationRecord
     result = if winner_id.nil? then "draw"
     elsif winner_id == viewer.id then "win"
     else "loss"
+    end
+
+    if spoiler_for?(mask_for)
+      return {
+        id: id,
+        url: url_helpers.fight_path(self),
+        opponent_name: other.display_name,
+        opponent_belt: other_belt,
+        opponent_url: url_helpers.fighter_path(other),
+        moves: [],
+        result: nil,
+        ko: nil,
+        xp_delta: nil,
+        masked: true
+      }
     end
 
     {

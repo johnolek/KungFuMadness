@@ -172,6 +172,59 @@ RSpec.describe Fight, type: :model do
     end
   end
 
+  describe "spoiler shield" do
+    let(:user) { create(:user) }
+    let(:me) { user.fighter }
+    let(:rival) { create(:fighter, name: "Rival") }
+    let(:fight) { create(:fight, :resolved, challenger: me, opponent: rival, winner: rival) }
+
+    it "flags an unwatched resolved fight for a participant with spoilers hidden" do
+      expect(fight.spoiler_for?(me)).to be(true)
+    end
+
+    it "does not flag once the participant has watched" do
+      fight.update!(challenger_seen_at: Time.current)
+      expect(fight.spoiler_for?(me)).to be(false)
+    end
+
+    it "does not flag when the user shows spoilers" do
+      user.update!(hide_fight_spoilers: false)
+      expect(fight.spoiler_for?(me)).to be(false)
+    end
+
+    it "never flags spectators, userless fighters, or nil viewers" do
+      expect(fight.spoiler_for?(create(:fighter))).to be(false)
+      expect(fight.spoiler_for?(rival)).to be(false)
+      expect(fight.spoiler_for?(nil)).to be(false)
+    end
+
+    it "masks the history row: no result, KO, moves, or XP" do
+      row = fight.history_row_payload(viewer: me, mask_for: me)
+
+      expect(row[:masked]).to be(true)
+      expect(row.values_at(:result, :ko, :xp_delta)).to all(be_nil)
+      expect(row[:moves]).to eq([])
+      expect(row[:opponent_name]).to eq("Rival")
+    end
+
+    it "leaves the history row intact for other viewers" do
+      row = fight.history_row_payload(viewer: me, mask_for: nil)
+
+      expect(row[:masked]).to be_nil
+      expect(row[:result]).to eq("loss")
+    end
+
+    it "masks the ticker payload for the unwatched participant only" do
+      masked = fight.ticker_payload(mask_for: me)
+      open = fight.ticker_payload
+
+      expect(masked[:masked]).to be(true)
+      expect(masked.values_at(:winner_side, :ko, :draw)).to all(be_nil)
+      expect(masked[:challenger][:moves]).to eq([])
+      expect(open[:winner_side]).to eq("opponent")
+    end
+  end
+
   describe "#respond!" do
     let(:challenger) { create(:fighter, belt: 3, xp: 800) }
     let(:opponent) { create(:fighter, belt: 3, xp: 800) }

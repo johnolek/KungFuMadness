@@ -27,7 +27,7 @@ class ApplicationController < ActionController::Base
     @sidebar_recent_fights = Fight.recently_resolved
                                   .includes(:challenger, :opponent, :winner, :fight_moves)
                                   .limit(SIDEBAR_RECENT_LIMIT)
-                                  .map(&:ticker_payload)
+                                  .map { |fight| fight.ticker_payload(mask_for: current_fighter) }
     @sidebar_online = build_online_sidebar(current_fighter)
     # Seeded as id lists (not counts) so the nav badges can dedupe live cable
     # events against what the server already counted.

@@ -259,7 +259,14 @@ round-by-round reveal happens only the FIRST time a participant views their own
 fight — `fights.challenger_seen_at` / `opponent_seen_at` are stamped by
 `FightsController#claim_first_own_view`; spectators/repeats see everything. The
 fight-settled toast is spoiler-free: "is settled" plus a "Watch the fight" link
-(live.js → Toasts' `link` support), never the result.
+(live.js → Toasts' `link` support), never the result. On top of that,
+`users.hide_fight_spoilers` (default ON, Preferences panel) masks a
+participant's own UNWATCHED fights everywhere results render: server renders
+pass the viewer as `mask_for:` into `ticker_payload`/`history_row_payload`
+(guarded by `Fight#spoiler_for?`), while the public DojoChannel broadcast stays
+unmasked and the sidebar/history islands mask the viewer's own incoming rows
+client-side (`youId`/`viewerId` + `hideSpoilers` props). Watching the fight
+stamps seen and the next render is unmasked.
 
 **Move picker** — `MoveGrid.svelte` lays the three rounds out HORIZONTALLY
 (columns), heights ordered low/mid/high, each an icon-button (MoveIcon) plus a

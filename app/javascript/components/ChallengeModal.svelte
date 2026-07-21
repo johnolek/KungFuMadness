@@ -220,7 +220,9 @@
                         </span>
                       </span>
                     </td>
-                    <td class="res res--{row.result}">{RESULT_LABEL[row.result]}{row.ko ? " (KO)" : ""}</td>
+                    <td class="res res--{row.masked ? 'masked' : row.result}">
+                      {row.masked ? "???" : `${RESULT_LABEL[row.result]}${row.ko ? " (KO)" : ""}`}
+                    </td>
                     <td><a href={row.url}>Watch</a></td>
                   </tr>
                 {/each}
@@ -322,6 +324,7 @@
   .res--win { color: var(--kfm-belt-green); font-weight: bold; }
   .res--loss { color: var(--kfm-belt-red); font-weight: bold; }
   .res--draw { color: var(--kfm-ink-soft); font-weight: bold; }
+  .res--masked { color: var(--kfm-ink-soft); font-weight: bold; letter-spacing: 0.15em; }
 
   .modal__error { color: var(--kfm-belt-red); font-weight: bold; }
 

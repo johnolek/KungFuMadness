@@ -3,9 +3,12 @@
   // belt-colored chip, loser dimmed, KO marker, relative time. The whole row
   // links to playback. Live: DojoChannel `fight_resolved` events (relayed as
   // `kfm:dojo`) prepend; belt_change events add promotion/demotion lines.
+  // Rows the server masked (your own unwatched fight, spoilers hidden) render
+  // both names neutral with a "?" badge; the live broadcast is public and
+  // unmasked, so your own incoming rows are masked here client-side.
   import { beltChipStyle, beltVar, relativeTime } from "./belt.js"
 
-  let { fights: initial = [] } = $props()
+  let { fights: initial = [], youId = null, hideSpoilers = false } = $props()
 
   const CAP = 20
 
@@ -21,12 +24,23 @@
     return null
   }
 
+  function maskOwn(fight) {
+    const mine = fight.challenger?.id === youId || fight.opponent?.id === youId
+    if (!hideSpoilers || !mine) return fight
+    return {
+      ...fight,
+      masked: true, ko: null, draw: null, winner_side: null,
+      challenger: { ...fight.challenger, moves: [], xp_delta: null },
+      opponent: { ...fight.opponent, moves: [], xp_delta: null }
+    }
+  }
+
   $effect(() => {
     const handler = (event) => {
       const message = event.detail
       if (message?.event === "fight_resolved" && message.fight) {
         if (fights.some((f) => f.id === message.fight.id)) return
-        fights = [message.fight, ...fights].slice(0, CAP)
+        fights = [maskOwn(message.fight), ...fights].slice(0, CAP)
       } else if (message?.event === "belt_change" && message.fighter) {
         const entry = {
           id: `belt-${message.fighter.id}-${Date.now()}`,
@@ -61,6 +75,19 @@
               <span class="feed__line">
                 <span class="chip" style={beltChipStyle(fight.fighter.belt)}>{fight.fighter.display_name}</span>
                 <span class="feed__vs">{fight.direction === "promotion" ? "rose to" : "fell to"} {fight.fighter.belt_name}</span>
+              </span>
+            </a>
+          </li>
+        {:else if fight.masked}
+          <li class="feed__row">
+            <a class="feed__link" href={fight.url}>
+              <span class="feed__line">
+                <span class="chip chip--draw" style={beltChipStyle(fight.challenger.belt)}>{fight.challenger.display_name}</span>
+                <span class="badge badge--masked" title="You haven't watched this fight yet">?</span>
+              </span>
+              <span class="feed__line">
+                <span class="chip chip--draw" style={beltChipStyle(fight.opponent.belt)}>{fight.opponent.display_name}</span>
+                <span class="feed__time">{(now, relativeTime(fight.resolved_at))}</span>
               </span>
             </a>
           </li>
@@ -164,6 +191,7 @@
   }
   .badge--ko { background: var(--kfm-belt-red); color: var(--kfm-parchment); }
   .badge--draw { background: var(--kfm-tatami); color: var(--kfm-ink); }
+  .badge--masked { background: var(--kfm-ink); color: var(--kfm-parchment); }
 
   .feed__time {
     color: var(--kfm-ink-soft);

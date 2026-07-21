@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_21_000100) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_21_000200) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -261,6 +261,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_21_000100) do
     t.datetime "created_at", null: false
     t.string "email"
     t.datetime "email_verified_at"
+    t.boolean "hide_fight_spoilers", default: true, null: false
     t.integer "push_min_pending_challenges", default: 1, null: false
     t.datetime "updated_at", null: false
     t.citext "username", null: false

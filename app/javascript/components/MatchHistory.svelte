@@ -8,7 +8,10 @@
   import MoveIcon from "./MoveIcon.svelte"
   import { beltChipStyle } from "./belt.js"
 
-  let { fights: initial = [], fighterId, showXp = true, emptyMessage = null } = $props()
+  let {
+    fights: initial = [], fighterId, showXp = true, emptyMessage = null,
+    viewerId = null, hideSpoilers = false
+  } = $props()
 
   const RESULT_LABEL = { win: "Won", loss: "Lost", draw: "Draw" }
 
@@ -23,19 +26,22 @@
     if (!mineSide) return null
     const mine = fight[mineSide]
     const other = mineSide === "challenger" ? fight.opponent : fight.challenger
-    const result =
-      fight.winner_side === null ? "draw" : fight.winner_side === mineSide ? "win" : "loss"
-    return {
+    const base = {
       id: fight.id,
       url: fight.url,
       opponent_name: other.display_name,
       opponent_belt: other.belt,
-      opponent_url: other.url,
-      moves: mine.moves ?? [],
-      result,
-      ko: fight.ko,
-      xp_delta: mine.xp_delta
+      opponent_url: other.url
     }
+    // The public broadcast is unmasked; a fresh fight of the VIEWER's is by
+    // definition unwatched, so mask it here when they keep spoilers hidden.
+    const viewerInvolved = fight.challenger?.id === viewerId || fight.opponent?.id === viewerId
+    if (hideSpoilers && viewerInvolved) {
+      return { ...base, moves: [], result: null, ko: null, xp_delta: null, masked: true }
+    }
+    const result =
+      fight.winner_side === null ? "draw" : fight.winner_side === mineSide ? "win" : "loss"
+    return { ...base, moves: mine.moves ?? [], result, ko: fight.ko, xp_delta: mine.xp_delta }
   }
 
   $effect(() => {
@@ -92,7 +98,11 @@
               </span>
             </td>
             <td>
-              <span class="result-{row.result}">{RESULT_LABEL[row.result]}{row.ko ? " (KO)" : ""}</span>
+              {#if row.masked}
+                <span class="result-masked" title="You haven't watched this fight yet">???</span>
+              {:else}
+                <span class="result-{row.result}">{RESULT_LABEL[row.result]}{row.ko ? " (KO)" : ""}</span>
+              {/if}
             </td>
             {#if showXp}
               <td>
@@ -101,7 +111,7 @@
                 {/if}
               </td>
             {/if}
-            <td><a href={row.url}>Watch</a></td>
+            <td><a href={row.url}>{row.masked ? "Watch to reveal" : "Watch"}</a></td>
           </tr>
         {/each}
       </tbody>

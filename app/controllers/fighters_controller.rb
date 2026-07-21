@@ -23,7 +23,7 @@ class FightersController < ApplicationController
       @page = params[:page].to_i.clamp(1, @total_pages)
       @history_rows = history.offset((@page - 1) * HISTORY_PER_PAGE)
                              .limit(HISTORY_PER_PAGE)
-                             .map { |fight| fight.history_row_payload(viewer: @fighter) }
+                             .map { |fight| fight.history_row_payload(viewer: @fighter, mask_for: current_fighter) }
     end
 
     @pending_count = @fighter.incoming_challenges.count + @fighter.outgoing_challenges.count

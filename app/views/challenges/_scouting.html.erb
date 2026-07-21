@@ -5,8 +5,10 @@
 <div class="panel-kfm">
   <div class="panel-kfm-title">Scouting: <%= fighter_display_name(scout) %></div>
   <div data-svelte-component="MatchHistory"
-       data-props="<%= { fights: recent_fights.map { |f| f.history_row_payload(viewer: scout) },
+       data-props="<%= { fights: recent_fights.map { |f| f.history_row_payload(viewer: scout, mask_for: current_fighter) },
                          fighterId: scout.id, showXp: false,
+                         viewerId: current_fighter&.id,
+                         hideSpoilers: current_user ? current_user.hide_fight_spoilers : false,
                          emptyMessage: "No fights on record yet — you're stepping into the unknown." }.to_json %>"></div>
   <p class="stat-line"><%= link_to "Full history →", fighter_path(scout) %></p>
 </div>

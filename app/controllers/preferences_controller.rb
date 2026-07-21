@@ -2,9 +2,10 @@ class PreferencesController < ApplicationController
   before_action :require_verified_fighter
 
   def update
-    allow = params[:allow_bot_challenges] == "1"
-    current_user.update!(allow_bot_challenges: allow)
-    notice = allow ? "Bots may challenge you." : "Bots will no longer challenge you."
-    redirect_to fighter_path(current_fighter), notice: notice
+    current_user.update!(
+      allow_bot_challenges: params[:allow_bot_challenges] == "1",
+      hide_fight_spoilers: params[:hide_fight_spoilers] == "1"
+    )
+    redirect_to fighter_path(current_fighter), notice: "Preferences saved."
   end
 end

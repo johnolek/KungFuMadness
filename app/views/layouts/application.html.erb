@@ -56,7 +56,8 @@
         <% if living_world? %>
           <aside class="kfm-sidebar kfm-sidebar--recent" aria-label="Recent fights">
             <div data-svelte-component="RecentFightsSidebar"
-                 data-props="<%= { fights: @sidebar_recent_fights }.to_json %>"></div>
+                 data-props="<%= { fights: @sidebar_recent_fights, youId: current_fighter.id,
+                                   hideSpoilers: current_user.hide_fight_spoilers }.to_json %>"></div>
           </aside>
         <% end %>
 
