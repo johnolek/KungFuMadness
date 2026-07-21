@@ -5,6 +5,12 @@ export function beltChipStyle(belt) {
   return `background: var(--belt-${Math.min(belt, 9)}); color: ${dark ? "var(--kfm-ink)" : "var(--kfm-parchment)"};`
 }
 
+// The index-aligned CSS var reference for a belt fill color, matching the ERB
+// `belt_var` helper.
+export function beltVar(belt) {
+  return `var(--belt-${Math.min(belt, 9)})`
+}
+
 // Coarse "N minutes ago" relative time from an ISO string, good enough for a
 // living ticker (no library, no per-second churn).
 export function relativeTime(iso) {

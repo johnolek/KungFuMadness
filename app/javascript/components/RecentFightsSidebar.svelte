@@ -3,7 +3,7 @@
   // belt-colored chip, loser dimmed, KO marker, relative time. The whole row
   // links to playback. Live: DojoChannel `fight_resolved` events (relayed as
   // `kfm:dojo`) prepend; belt_change events add promotion/demotion lines.
-  import { beltChipStyle, relativeTime } from "./belt.js"
+  import { beltChipStyle, beltVar, relativeTime } from "./belt.js"
 
   let { fights: initial = [] } = $props()
 
@@ -69,24 +69,22 @@
           <li class="feed__row" class:feed__row--draw={s === null}>
             <a class="feed__link" href={fight.url}>
               {#if s}
-                <span class="feed__line feed__line--winner">
+                <span class="feed__line">
                   <span class="chip" style={beltChipStyle(s.winner.belt)}>{s.winner.display_name}</span>
                   {#if fight.ko}<span class="badge badge--ko">KO</span>{/if}
                 </span>
-                <span class="feed__line feed__line--loser">
-                  <span class="feed__vs">beat</span>
-                  <span class="feed__loser">{s.loser.display_name}</span>
+                <span class="feed__line">
+                  <span class="chip chip--loser" style="border-left-color: {beltVar(s.loser.belt)};">{s.loser.display_name}</span>
                   <span class="feed__time">{(now, relativeTime(fight.resolved_at))}</span>
                 </span>
               {:else}
-                <span class="feed__line feed__line--winner">
+                <span class="feed__line">
                   <span class="chip chip--draw" style={beltChipStyle(fight.challenger.belt)}>{fight.challenger.display_name}</span>
                   <span class="badge badge--draw">Draw</span>
                   {#if fight.ko}<span class="badge badge--ko">KO</span>{/if}
                 </span>
-                <span class="feed__line feed__line--loser">
-                  <span class="feed__vs">drew</span>
-                  <span class="feed__loser">{fight.opponent.display_name}</span>
+                <span class="feed__line">
+                  <span class="chip chip--draw" style={beltChipStyle(fight.opponent.belt)}>{fight.opponent.display_name}</span>
                   <span class="feed__time">{(now, relativeTime(fight.resolved_at))}</span>
                 </span>
               {/if}
@@ -130,8 +128,6 @@
     white-space: nowrap;
   }
 
-  .feed__line--loser { padding-left: 0.2rem; }
-
   .chip {
     display: inline-block;
     padding: 0 0.3rem;
@@ -147,18 +143,14 @@
 
   .chip--draw { opacity: 0.75; }
 
-  .feed__vs {
+  /* The loser keeps their belt color, but as a quiet accent bar instead of the
+     winner's solid fill — names in both lines start at the same x. */
+  .chip--loser {
+    background: transparent;
     color: var(--kfm-ink-soft);
-    font-style: italic;
-    flex: none;
-  }
-
-  .feed__loser {
-    color: var(--kfm-ink-soft);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    flex: 0 1 auto;
-    min-width: 0;
+    font-weight: normal;
+    border-left-width: 4px;
+    border-left-style: solid;
   }
 
   .badge {
