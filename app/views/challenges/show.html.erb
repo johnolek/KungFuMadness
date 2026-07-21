@@ -21,6 +21,9 @@
         <p class="stat-line">Record: <%= @fight.challenger.record %> (W-L-D)</p>
       </div>
     </div>
+    <% if @fight.challenge_message.present? %>
+      <blockquote class="challenge-taunt">&ldquo;<%= @fight.challenge_message %>&rdquo;</blockquote>
+    <% end %>
     <div
       data-svelte-component="MoveCommitter"
       data-props="<%= {

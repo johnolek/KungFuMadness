@@ -52,6 +52,33 @@ RSpec.describe "Challenges", type: :request do
       expect(flash[:notice]).to be_present
     end
 
+    it "stores an optional trimmed challenge message the opponent will see" do
+      post challenges_path, params: { opponent: opponent.id, moves: moves_json, message: "  Revenge incoming!  " }
+
+      fight = Fight.last
+      expect(fight.challenge_message).to eq("Revenge incoming!")
+
+      sign_in_as(opponent_user)
+      get challenge_path(fight)
+      expect(response.body).to include("Revenge incoming!")
+
+      get challenge_path(fight), headers: { "Accept" => "application/json" }
+      expect(response.parsed_body["message"]).to eq("Revenge incoming!")
+    end
+
+    it "rejects a message over the length cap" do
+      expect {
+        post challenges_path, params: { opponent: opponent.id, moves: moves_json, message: "x" * 281 }
+      }.not_to change(Fight, :count)
+      expect(flash[:alert]).to be_present
+    end
+
+    it "stores nil when the message is blank" do
+      post challenges_path, params: { opponent: opponent.id, moves: moves_json, message: "   " }
+
+      expect(Fight.last.challenge_message).to be_nil
+    end
+
     it "rejects a self-challenge with a flash" do
       expect {
         post challenges_path, params: { opponent: me.id, moves: moves_json }

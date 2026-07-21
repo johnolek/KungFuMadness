@@ -32,7 +32,8 @@ class ChallengesController < ApplicationController
     fight = Fight.create_challenge!(
       challenger: current_fighter,
       opponent: opponent,
-      moves: parsed_moves
+      moves: parsed_moves,
+      message: params[:message]
     )
     enqueue_bot_response(fight)
     respond_to do |format|
@@ -43,6 +44,11 @@ class ChallengesController < ApplicationController
     respond_to do |format|
       format.html { redirect_to fighter_path(params[:opponent]), alert: e.message }
       format.json { render json: { error: e.message }, status: :unprocessable_content }
+    end
+  rescue ActiveRecord::RecordInvalid => e
+    respond_to do |format|
+      format.html { redirect_to new_challenge_path(opponent: params[:opponent]), alert: e.record.errors.full_messages.to_sentence }
+      format.json { render json: { error: e.record.errors.full_messages.to_sentence }, status: :unprocessable_content }
     end
   rescue JSON::ParserError, KeyError, ArgumentError
     respond_to do |format|
@@ -149,6 +155,7 @@ class ChallengesController < ApplicationController
       fight_id: @fight.id,
       accept_url: accept_challenge_path(@fight),
       decline_url: decline_challenge_path(@fight),
+      message: @fight.challenge_message,
       opponent: fighter_card(@fight.challenger, belt: @fight.challenger_belt),
       scouting: scout_payload(@fight.challenger)
     }

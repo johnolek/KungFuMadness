@@ -12,6 +12,9 @@ class Fight < ApplicationRecord
   FARM_LIMIT = 4
   FARM_WINDOW = 24.hours
 
+  # Longest free-text taunt a challenger may attach.
+  CHALLENGE_MESSAGE_MAX = 280
+
   belongs_to :challenger, class_name: "Fighter"
   belongs_to :opponent, class_name: "Fighter"
   belongs_to :winner, class_name: "Fighter", optional: true
@@ -24,6 +27,7 @@ class Fight < ApplicationRecord
   validates :challenger_belt, :challenger_xp, :opponent_belt, :opponent_xp,
             presence: true, numericality: { only_integer: true }
   validates :expires_at, presence: true
+  validates :challenge_message, length: { maximum: CHALLENGE_MESSAGE_MAX }, allow_nil: true
   validate :distinct_fighters
 
   # Living-world broadcasts ride the transaction: a fresh challenge is mail to the
@@ -49,13 +53,16 @@ class Fight < ApplicationRecord
   # writes the challenger's three committed move rows, and starts the response
   # clock. Everything happens in one transaction so a half-built challenge never
   # exists. Rejects self-challenges and pairs still inside the cooldown window.
+  # +message+ is the optional free-text taunt shown openly to the opponent —
+  # mind games are the point, so unlike moves it is NOT sealed.
   #
   # @param challenger [Fighter]
   # @param opponent [Fighter]
   # @param moves [Array<Hash>] three rounds of { round:, attack_height:, attack_style:, block_height: }
+  # @param message [String, nil]
   # @return [Fight] the persisted pending fight
   # @raise [ChallengeError] on self-challenge or an active cooldown
-  def self.create_challenge!(challenger:, opponent:, moves:)
+  def self.create_challenge!(challenger:, opponent:, moves:, message: nil)
     raise ChallengeError, "You can't challenge yourself." if challenger == opponent
 
     if challenger.bot? && !opponent.accepts_bot_challenges?
@@ -79,6 +86,7 @@ class Fight < ApplicationRecord
         challenger_xp: challenger.xp,
         opponent_belt: opponent.belt,
         opponent_xp: opponent.xp,
+        challenge_message: message.to_s.strip.presence,
         expires_at: CHALLENGE_TTL.from_now
       )
       fight.write_moves!(fighter: challenger, moves: moves)
@@ -156,6 +164,7 @@ class Fight < ApplicationRecord
       status: status,
       created_at: created_at,
       expires_at: expires_at,
+      message: challenge_message,
       challenger: fighter_summary(challenger, belt: challenger_belt),
       opponent: fighter_summary(opponent, belt: opponent_belt)
     }

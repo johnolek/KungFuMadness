@@ -503,6 +503,15 @@ a {
 .result-draw { color: var(--kfm-ink-soft); font-weight: bold; }
 .result-masked { color: var(--kfm-ink-soft); font-weight: bold; letter-spacing: 0.15em; }
 
+.challenge-taunt {
+  margin: 0.6rem 0;
+  padding: 0.3rem 0.6rem;
+  border-left: 4px solid var(--kfm-belt-red);
+  background: rgba(0, 0, 0, 0.04);
+  font-style: italic;
+  overflow-wrap: anywhere;
+}
+
 .xp-up::before { content: "+"; }
 .xp-up { color: var(--kfm-belt-green); }
 .xp-down { color: var(--kfm-belt-red); }

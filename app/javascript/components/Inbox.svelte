@@ -56,6 +56,9 @@
           <a class="chip" style={beltChipStyle(card.challenger.belt)} href={card.challenger_url}>{card.challenger.display_name}</a>
           <button type="button" class="btn-kfm btn-kfm--sm" data-respond-open={card.id}>Respond</button>
         </div>
+        {#if card.message}
+          <p class="taunt">“{card.message}”</p>
+        {/if}
       {/each}
     {/if}
   </section>
@@ -92,4 +95,14 @@
   }
 
   .waiting { color: var(--kfm-ink-soft); font-weight: bold; }
+
+  .taunt {
+    margin: -0.2rem 0 0.4rem;
+    padding-left: 0.5rem;
+    border-left: 3px solid var(--kfm-belt-red);
+    font-style: italic;
+    font-size: 0.8rem;
+    color: var(--kfm-ink-soft);
+    overflow-wrap: anywhere;
+  }
 </style>

@@ -357,6 +357,10 @@ The challenger's committed moves exist from creation but must never reach the
 opponent pre-resolution. All fight output goes through explicit payload methods
 (inbox payload = no moves; playback payload = only when resolved). A request
 spec must assert the respond page + JSON contain zero challenger-move data.
+The optional `fights.challenge_message` (≤280 chars, free text, no moderation
+yet) is deliberately NOT sealed — it's the challenger's open taunt/mind-game
+("I'm going to throw all low punches"), shown to the opponent in the inbox,
+respond page, and respond modal.
 
 ---
 

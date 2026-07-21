@@ -25,6 +25,9 @@
   let fightId = $state(null)
   let moves = $state([])
   let complete = $state(false)
+  let message = $state("")
+
+  const MESSAGE_MAX = 280
 
   const RESULT_LABEL = { win: "Won", loss: "Lost", draw: "Draw" }
 
@@ -38,6 +41,7 @@
     moves = []
     complete = false
     submitting = false
+    message = ""
   }
 
   function close() {
@@ -102,7 +106,7 @@
     if (!complete || submitting) return
     submitting = true
     error = ""
-    const { ok, payload } = await post(data.action, { opponent: opponentId, moves })
+    const { ok, payload } = await post(data.action, { opponent: opponentId, moves, message: message.trim() })
     if (ok) {
       toast("notice", payload.message || "Challenge sent")
       document.dispatchEvent(new CustomEvent("kfm:challenge-sent", {
@@ -192,7 +196,19 @@
           <span class="opp__record">Record {data.opponent.record}</span>
         </div>
 
+        {#if mode === "respond" && data.message}
+          <blockquote class="taunt">“{data.message}”</blockquote>
+        {/if}
+
         <MoveGrid onchange={onGrid} />
+
+        {#if mode === "challenge"}
+          <label class="taunt-field">
+            Add a message (optional — mind games encouraged)
+            <input type="text" maxlength={MESSAGE_MAX} bind:value={message}
+                   placeholder="Revenge incoming!">
+          </label>
+        {/if}
 
         <details class="scout" open>
           <summary>Match history — last {data.scouting.length} fights</summary>
@@ -314,6 +330,24 @@
   .opp__chip {
     font-size: 0.9rem;
     text-decoration: none;
+  }
+
+  .taunt {
+    margin: 0 0 0.6rem;
+    padding: 0.3rem 0.6rem;
+    border-left: 4px solid var(--kfm-belt-red);
+    background: rgba(0, 0, 0, 0.04);
+    font-style: italic;
+    overflow-wrap: anywhere;
+  }
+
+  .taunt-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    margin: 0.6rem 0;
+    font-size: 0.8rem;
+    color: var(--kfm-ink-soft);
   }
 
   .scout { margin: 0.75rem 0; }

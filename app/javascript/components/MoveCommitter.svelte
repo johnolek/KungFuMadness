@@ -13,8 +13,11 @@
     method = "post",
     submitLabel = "Commit moves",
     csrfToken = "",
-    hiddenFields = {}
+    hiddenFields = {},
+    messageField = false
   } = $props()
+
+  const MESSAGE_MAX = 280
 
   let moves = $state([])
   let complete = $state(false)
@@ -39,6 +42,13 @@
 
   <MoveGrid {onchange} />
 
+  {#if messageField}
+    <label class="taunt-field">
+      Add a message (optional — mind games encouraged)
+      <input type="text" name="message" maxlength={MESSAGE_MAX} placeholder="Revenge incoming!">
+    </label>
+  {/if}
+
   <span class="commit-wrap" use:tooltip={{ content: INCOMPLETE_TIP, enabled: !complete }}>
     <button type="submit" class="commit-btn" disabled={!complete}>{submitLabel}</button>
   </span>
@@ -53,6 +63,15 @@
 
   .commit-wrap {
     align-self: flex-start;
+  }
+
+  .taunt-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    font-size: 0.8rem;
+    color: var(--kfm-ink-soft, #4a3a24);
+    max-width: 28rem;
   }
 
   .commit-btn {

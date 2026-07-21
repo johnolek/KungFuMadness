@@ -19,7 +19,8 @@
       method: "post",
       submitLabel: "Send challenge",
       csrfToken: form_authenticity_token,
-      hiddenFields: { opponent: @opponent.id }
+      hiddenFields: { opponent: @opponent.id },
+      messageField: true
     }.to_json %>"
   ></div>
 </div>
