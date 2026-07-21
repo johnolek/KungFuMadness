@@ -61,19 +61,27 @@ Rails.application.configure do
               (ENV["WEBAUTHN_ORIGIN"].present? ? URI(ENV["WEBAUTHN_ORIGIN"]).host : "localhost")
   config.action_mailer.default_url_options = { host: mail_host, protocol: "https" }
 
-  # Provider-agnostic SMTP, configured entirely from the environment. `.compact`
+  # Prefer the SMTP2GO HTTP API when a key is set — it gives an explicit, logged
+  # delivery result (see Smtp2goDelivery) over HTTPS. Otherwise fall back to
+  # provider-agnostic SMTP, configured entirely from the environment. `.compact`
   # drops unset keys so an incomplete config degrades gracefully rather than
   # sending garbage. Magic-link sign-in and the email-verification flow need this.
-  config.action_mailer.delivery_method = :smtp
-  config.action_mailer.smtp_settings = {
-    address: ENV["SMTP_ADDRESS"],
-    port: ENV.fetch("SMTP_PORT", 587).to_i,
-    user_name: ENV["SMTP_USERNAME"],
-    password: ENV["SMTP_PASSWORD"],
-    authentication: ENV.fetch("SMTP_AUTHENTICATION", "plain").to_sym,
-    domain: ENV["SMTP_DOMAIN"],
-    enable_starttls_auto: true
-  }.compact
+  if ENV["SMTP2GO_API_KEY"].present?
+    # Settings (the API key) are seeded where the method is registered, in
+    # config/initializers/smtp2go.rb — see the note there on boot order.
+    config.action_mailer.delivery_method = :smtp2go
+  else
+    config.action_mailer.delivery_method = :smtp
+    config.action_mailer.smtp_settings = {
+      address: ENV["SMTP_ADDRESS"],
+      port: ENV.fetch("SMTP_PORT", 587).to_i,
+      user_name: ENV["SMTP_USERNAME"],
+      password: ENV["SMTP_PASSWORD"],
+      authentication: ENV.fetch("SMTP_AUTHENTICATION", "plain").to_sym,
+      domain: ENV["SMTP_DOMAIN"],
+      enable_starttls_auto: true
+    }.compact
+  end
 
   # Enable locale fallbacks for I18n (makes lookups for any locale fall back to
   # the I18n.default_locale when a translation cannot be found).

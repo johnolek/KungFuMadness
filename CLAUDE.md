@@ -48,6 +48,11 @@ Read from ENV (all optional in dev, which has sane fallbacks):
 - `WEBAUTHN_RP_NAME` / `WEBAUTHN_RP_ID` / `WEBAUTHN_ORIGIN` — passkey relying-party
   config (dev falls back to `localhost` + ports 3000–3010).
 - `MAIL_FROM` — sender address; also the Web Push VAPID subject (`mailto:`).
+- `SMTP2GO_API_KEY` — when set in production, mail sends via the SMTP2GO HTTP
+  API (`Smtp2goDelivery`, copied from the project-tracker app) with an explicit
+  logged success (`[smtp2go] delivered … email_id=…`) or failure per message;
+  otherwise the provider-agnostic `SMTP_*` env config applies. The sender must
+  be verified at SMTP2GO or the API rejects the send.
 - `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` — Web Push keys. In dev, if unset, a
   keypair is generated on first boot and persisted to `tmp/vapid.json`
   (git-ignored) so push works with zero setup. Generate a production pair with
