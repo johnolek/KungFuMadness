@@ -69,10 +69,11 @@ that Rails otherwise negotiates to `:html`, 500ing on template lookup
 (regression-covered in `spec/requests/pwa_spec.rb`). Icons live in `public/`
 (`icon.png` 512, `icon-192.png`, `icon-maskable.png` with safe-zone padding,
 `apple-touch-icon.png` 180, `badge.png` monochrome notification badge), all
-rendered from `public/icon.svg` (拳 on a rising sun over parchment). The layout
+rendered from `public/icon.svg` (placeholder "KFM" text mark on parchment;
+real designed art comes later). The layout
 sets `theme-color` + the apple-mobile-web-app metas. `push.js` registers the
 service worker for EVERY visitor on load (installability + offline), not just
-push subscribers. The SW (cache `kfm-v3` — bump on change) precaches
+push subscribers. The SW (cache `kfm-v4` — bump on change) precaches
 `/offline.html` and serves it when a navigation fails offline; it intercepts
 nothing else.
 

@@ -1,12 +1,12 @@
 // Kung Fu Madness service worker.
-// cache-version: 3 — bump CACHE_NAME on every change so browsers refetch the SW.
+// cache-version: 4 — bump CACHE_NAME on every change so browsers refetch the SW.
 //
 // Registered at root scope from app/javascript/push.js so it controls the
 // whole app. Handles Web Push and a minimal offline fallback: navigations go
 // network-first and fall back to a cached /offline.html when the dojo is
 // unreachable. No other requests are intercepted.
 
-const CACHE_NAME = "kfm-v3"
+const CACHE_NAME = "kfm-v4"
 const OFFLINE_URL = "/offline.html"
 const PRECACHE = [OFFLINE_URL, "/icon-192.png"]
 
