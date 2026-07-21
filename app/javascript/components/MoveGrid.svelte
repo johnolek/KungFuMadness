@@ -102,6 +102,13 @@
     gap: 0.6rem;
   }
 
+  /* Phones: stack the rounds vertically — no sideways swiping to reach round 3. */
+  @media (max-width: 700px) {
+    .grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
   .round {
     border: 3px solid var(--kfm-border, #1a1108);
     background: var(--kfm-panel, #fbf3dc);
