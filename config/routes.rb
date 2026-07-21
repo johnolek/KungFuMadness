@@ -51,8 +51,11 @@ Rails.application.routes.draw do
   # Push preferences: how many challenges must be pending before a push fires.
   patch "push_settings", to: "push_settings#update"
 
-  # Game preferences (currently: whether bots may challenge you).
+  # Game preferences (bot challenges, spoiler shield).
   patch "preferences", to: "preferences#update"
+
+  # Own-profile customization: portrait upload + short bio.
+  patch "profile", to: "profiles#update"
 
   # PWA: dynamic manifest + service worker (the SW must be same-origin at root
   # scope to control the whole app). Rendered from app/views/pwa/*. The pinned

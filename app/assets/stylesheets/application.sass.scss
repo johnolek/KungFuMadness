@@ -392,6 +392,51 @@ a {
   width: 120px;
 }
 
+// Portrait sits above the belt bar; the belt collapses to a slim band under it.
+.fighter-portrait {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  border: 3px solid var(--kfm-border);
+  box-shadow: 3px 3px 0 var(--kfm-shadow);
+  margin-bottom: 0.35rem;
+}
+
+.fighter-portrait + .belt-rect {
+  aspect-ratio: auto;
+  height: 1.1rem;
+}
+
+.fighter-bio {
+  margin: 0.4rem 0 0.2rem;
+  font-style: italic;
+  color: var(--kfm-ink-soft);
+  overflow-wrap: anywhere;
+}
+
+.profile-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  align-items: flex-start;
+}
+
+.profile-form__field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  width: 100%;
+  max-width: 28rem;
+  font-size: 0.85rem;
+  color: var(--kfm-ink-soft);
+
+  textarea {
+    font-family: inherit;
+    resize: vertical;
+  }
+}
+
 .fighter-head__meta {
   flex: 1 1 12rem;
 }

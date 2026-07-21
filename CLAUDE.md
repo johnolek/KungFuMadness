@@ -241,7 +241,15 @@ profile. No history table shows dates — the fight page carries the "Settled �
 stamp. Moves columns are two stacked glyph rows (attacks over blocks) so
 patterns scan horizontally; the old `_history_table` partial and
 `move_icon`/`move_glyphs` ERB helpers are gone. Profiles also show "Online now"
-/ "Last online N ago" from `last_seen_at`.
+/ "Last online N ago" from `last_seen_at`, plus an optional uploaded portrait
+(Active Storage `fighter.avatar`, PNG/JPEG/WebP/GIF ≤2MB, square vips variant —
+animated GIFs ship unresized to keep the animation; Dockerfile installs
+libvips) and a short italic `fighters.bio` (≤200 chars), both edited via the
+own-profile "Your profile" panel (`PATCH /profile`). Roster, profiles,
+leaderboard, and resolved-fight playback are PUBLIC (signed-out spectators
+included), as are both sidebars: anonymous cable connections are allowed
+(nil `current_user`), DojoChannel streams to spectators without stamping
+presence, and `body[data-kfm-fighter]` gates the personal channel + pings.
 
 **iOS** — every interactive element gets `touch-action: manipulation`, inputs
 are 16px, and the viewport pins `maximum-scale=1`, so taps are instant and

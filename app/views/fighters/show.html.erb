@@ -4,6 +4,11 @@
   <div class="panel-kfm-title"><%= fighter_display_name(@fighter) %></div>
   <div class="fighter-head">
     <div class="fighter-head__avatar">
+      <% if @fighter.avatar.attached? %>
+        <%# Animated GIFs ship as-is (very 2002); everything else gets a square variant. %>
+        <% portrait = @fighter.avatar.content_type == "image/gif" ? @fighter.avatar : @fighter.avatar.variant(resize_to_fill: [ 320, 320 ]) %>
+        <%= image_tag portrait, class: "fighter-portrait", alt: "#{@fighter.name}'s portrait" %>
+      <% end %>
       <div class="belt-rect" style="background: <%= belt_var(@fighter.belt) %>;"
            role="img" aria-label="<%= @fighter.belt_name %> belt"></div>
     </div>
@@ -21,6 +26,10 @@
           Never seen online
         <% end %>
       </p>
+
+      <% if @fighter.bio.present? %>
+        <p class="fighter-bio"><%= @fighter.bio %></p>
+      <% end %>
 
       <% form = @scouting.recent_form %>
       <% if form.any? %>
@@ -85,6 +94,29 @@
 <% end %>
 
 <% if @own_profile %>
+  <div class="panel-kfm">
+    <div class="panel-kfm-title">Your profile</div>
+    <%= form_with url: profile_path, method: :patch, multipart: true, class: "profile-form" do |form| %>
+      <label class="profile-form__field">
+        Fighter portrait (PNG/JPEG/WebP/GIF, 2MB max)
+        <%= form.file_field :avatar, accept: Fighter::AVATAR_CONTENT_TYPES.join(",") %>
+      </label>
+      <% if current_fighter.avatar.attached? %>
+        <label class="prefs-row">
+          <%= form.check_box :remove_avatar %>
+          Remove current portrait
+        </label>
+      <% end %>
+      <label class="profile-form__field">
+        Short description
+        <%= form.text_area :bio, value: current_fighter.bio, rows: 3,
+              maxlength: Fighter::BIO_MAX_LENGTH,
+              placeholder: "A few words of intimidation or philosophy (#{Fighter::BIO_MAX_LENGTH} chars max)" %>
+      </label>
+      <button type="submit" class="btn-kfm btn-kfm--sm">Save profile</button>
+    <% end %>
+  </div>
+
   <% if Push.configured? %>
     <%# Progressive opt-in: hidden until push.js confirms the browser supports it. %>
     <div class="panel-kfm push-alerts" data-push-alerts hidden>

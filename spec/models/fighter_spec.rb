@@ -11,6 +11,33 @@ RSpec.describe Fighter, type: :model do
     expect(build(:fighter, name: "iron mantis", user: nil)).not_to be_valid
   end
 
+  describe "profile customization" do
+    it "caps the bio length" do
+      expect(build(:fighter, bio: "a" * Fighter::BIO_MAX_LENGTH)).to be_valid
+      expect(build(:fighter, bio: "a" * (Fighter::BIO_MAX_LENGTH + 1))).not_to be_valid
+    end
+
+    it "accepts a small image avatar" do
+      fighter = create(:fighter)
+      fighter.avatar.attach(io: StringIO.new("png bytes"), filename: "a.png", content_type: "image/png")
+      expect(fighter).to be_valid
+    end
+
+    it "rejects a non-image avatar" do
+      fighter = create(:fighter)
+      fighter.avatar.attach(io: StringIO.new("plain text"), filename: "a.txt", content_type: "text/plain")
+      expect(fighter).not_to be_valid
+      expect(fighter.errors[:avatar].join).to include("PNG, JPEG, WebP, or GIF")
+    end
+
+    it "rejects an oversize avatar" do
+      fighter = create(:fighter)
+      fighter.avatar.attach(io: StringIO.new("png bytes"), filename: "a.png", content_type: "image/png")
+      allow(fighter.avatar.blob).to receive(:byte_size).and_return(Fighter::AVATAR_MAX_BYTES + 1)
+      expect(fighter).not_to be_valid
+    end
+  end
+
   it "builds a valid bot with no user" do
     bot = build(:fighter, :bot)
     expect(bot).to be_valid

@@ -1,15 +1,22 @@
 class Fighter < ApplicationRecord
+  AVATAR_CONTENT_TYPES = %w[image/png image/jpeg image/webp image/gif].freeze
+  AVATAR_MAX_BYTES = 2.megabytes
+  BIO_MAX_LENGTH = 200
+
   belongs_to :user, optional: true
 
   has_many :challenges_made, class_name: "Fight", foreign_key: :challenger_id, dependent: :destroy, inverse_of: :challenger
   has_many :challenges_received, class_name: "Fight", foreign_key: :opponent_id, dependent: :destroy, inverse_of: :opponent
   has_many :fight_moves, dependent: :destroy
+  has_one_attached :avatar
 
   validates :name, presence: true, uniqueness: { case_sensitive: false }
   validates :xp, :belt, :wins, :losses, :draws, :declines,
             presence: true, numericality: { only_integer: true }
   validates :belt, numericality: { greater_than_or_equal_to: 0 }
   validates :user_id, uniqueness: true, allow_nil: true
+  validates :bio, length: { maximum: BIO_MAX_LENGTH }, allow_nil: true
+  validate :avatar_within_limits
 
   # How recently last_seen_at must have been stamped for a fighter to count as
   # "online". The DojoChannel ping loop and the bot tick both refresh within this
@@ -114,5 +121,14 @@ class Fighter < ApplicationRecord
   def broadcast_belt_change
     from, _to = saved_change_to_belt
     DojoChannel.broadcast_belt_change(self, from: from)
+  end
+
+  def avatar_within_limits
+    return unless avatar.attached?
+
+    unless AVATAR_CONTENT_TYPES.include?(avatar.content_type)
+      errors.add(:avatar, "must be a PNG, JPEG, WebP, or GIF image")
+    end
+    errors.add(:avatar, "must be 2MB or smaller") if avatar.blob.byte_size > AVATAR_MAX_BYTES
   end
 end
