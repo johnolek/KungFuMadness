@@ -53,10 +53,7 @@
     {:else}
       {#each incoming as card (card.id)}
         <div class="challenge-row">
-          <span>
-            <span class="chip" style={beltChipStyle(card.challenger.belt)}>{card.challenger.belt_name}</span>
-            <a href={card.challenger_url}>{card.challenger.display_name}</a>
-          </span>
+          <a class="chip" style={beltChipStyle(card.challenger.belt)} href={card.challenger_url}>{card.challenger.display_name}</a>
           <button type="button" class="btn-kfm btn-kfm--sm" data-respond-open={card.id}>Respond</button>
         </div>
       {/each}
@@ -70,10 +67,7 @@
     {:else}
       {#each outgoing as card (card.id)}
         <div class="challenge-row">
-          <span>
-            <span class="chip" style={beltChipStyle(card.opponent.belt)}>{card.opponent.belt_name}</span>
-            <a href={card.opponent_url}>{card.opponent.display_name}</a>
-          </span>
+          <a class="chip" style={beltChipStyle(card.opponent.belt)} href={card.opponent_url}>{card.opponent.display_name}</a>
           <span class="waiting">Awaiting reply…</span>
         </div>
       {/each}
@@ -84,12 +78,17 @@
 <style>
   .chip {
     display: inline-block;
+    min-width: 0;
     padding: 0 0.35rem;
     border: 2px solid var(--kfm-border);
     font-size: 0.75rem;
     font-weight: bold;
     text-transform: uppercase;
     vertical-align: middle;
+    text-decoration: none;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .waiting { color: var(--kfm-ink-soft); font-weight: bold; }

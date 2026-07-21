@@ -42,6 +42,20 @@ RSpec.describe "Dojo", type: :request do
       expect(response.body).not_to include('name="vapid-public-key"')
     end
 
+    it "shows the fighter's own match history on the homepage" do
+      user = create(:user)
+      sign_in_as(user)
+      create(:fight, :resolved,
+             challenger: user.fighter,
+             opponent: create(:fighter, name: "Homepage Rival"),
+             resolved_at: 1.hour.ago)
+
+      get root_path
+
+      expect(response.body).to include("Your match history")
+      expect(response.body).to include("Homepage Rival")
+    end
+
     it "seeds the inbox island with the fighter's incoming and outgoing challenges" do
       user = create(:user)
       sign_in_as(user)

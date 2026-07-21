@@ -123,16 +123,16 @@ class ChallengesController < ApplicationController
     end
   end
 
-  # Payload for the challenge modal: who you're facing plus their compact scouting
-  # table. Keeps sealed discipline trivially — the target has no bearing on any
-  # pending challenge's moves.
+  # Payload for the challenge modal: who you're facing plus their recent match
+  # history — raw results only, no tendency digests (scouting is homework, not a
+  # cheat sheet). Keeps sealed discipline trivially — the target has no bearing
+  # on any pending challenge's moves.
   def challenge_modal_payload(opponent)
     {
       mode: "challenge",
       action: challenges_path,
       opponent: fighter_card(opponent, belt: opponent.belt),
-      scouting: scout_payload(opponent),
-      tendency: tendency_payload(opponent)
+      scouting: scout_payload(opponent)
     }
   end
 
@@ -150,8 +150,7 @@ class ChallengesController < ApplicationController
       accept_url: accept_challenge_path(@fight),
       decline_url: decline_challenge_path(@fight),
       opponent: fighter_card(@fight.challenger, belt: @fight.challenger_belt),
-      scouting: scout_payload(@fight.challenger),
-      tendency: tendency_payload(@fight.challenger)
+      scouting: scout_payload(@fight.challenger)
     }
   end
 
@@ -169,12 +168,6 @@ class ChallengesController < ApplicationController
     }
   end
 
-  # Compact tendency strip for the modal — overall attack/block height splits over
-  # the fighter's full resolved history. Nil when there's nothing to read yet.
-  def tendency_payload(fighter)
-    Scouting.new(fighter: fighter).strip_summary
-  end
-
   # Compact last-N resolved fights from +fighter+'s perspective for modal scouting.
   def scout_payload(fighter)
     scout_fights(fighter).map do |fight|
@@ -190,6 +183,7 @@ class ChallengesController < ApplicationController
         date: fight.resolved_at.strftime("%Y-%m-%d"),
         opponent_name: other.display_name,
         opponent_belt: other_belt,
+        moves: fight.scouting_moves_for(fighter),
         result: result,
         ko: fight.ko,
         url: fight_path(fight)
@@ -199,7 +193,7 @@ class ChallengesController < ApplicationController
 
   # A fighter's most recent resolved fights for the scouting panel.
   def scout_fights(fighter)
-    fighter.resolved_fights.includes(:challenger, :opponent).limit(SCOUT_FIGHTS)
+    fighter.resolved_fights.includes(:challenger, :opponent, :fight_moves).limit(SCOUT_FIGHTS)
   end
 
   def viewer_role_for(fight)

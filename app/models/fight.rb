@@ -207,6 +207,22 @@ class Fight < ApplicationRecord
     }
   end
 
+  # The moves +fighter+ committed in this fight as compact
+  # [attack_height, attack_style, block_height] tuples in round order — the
+  # at-a-glance pattern read for scouting tables. Deliberately key-free (no
+  # attack_height/block_height names) and EMPTY until resolved, so pending
+  # commits stay sealed and payloads never carry the sealed-move vocabulary.
+  #
+  # @param fighter [Fighter]
+  # @return [Array<Array(Integer, Integer, Integer)>]
+  def scouting_moves_for(fighter)
+    return [] unless resolved?
+
+    fight_moves.select { |m| m.fighter_id == fighter.id }
+               .sort_by(&:round)
+               .map { |m| [ m.attack_height, m.attack_style, m.block_height ] }
+  end
+
   # @return ["challenger", "opponent", nil] which side won, nil for a draw
   def winner_side
     return nil if winner_id.nil?

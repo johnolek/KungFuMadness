@@ -179,28 +179,62 @@ the root page — it exercises the full ERB → island → props → `<style>` p
 ## Scouting, leaderboard & playback flavor
 
 **`Scouting`** (`app/models/scouting.rb`) is a plain-Ruby read model over a
-fighter's RESOLVED history (never pending/sealed moves). It exposes attack/block
-height `Distribution`s (overall, a last-10 split, and per round 1–3), KO rate,
-average fight length, win rate bucketed by opponent belt gap (`Rate` by
-higher/same/lower), a newest-first `recent_form` W/L/D list, and `#streak`.
-`#strip_summary` is the compact JSON the challenge modal and the no-JS scouting
-partial read. It powers the profile "Scouting report" panel
-(`fighters/_tendencies`, static CSS bar meters via the `tendency_meter` helper)
-and the form strip on profiles.
+fighter's RESOLVED history (never pending/sealed moves). It still computes
+distributions/KO rate/win-rate buckets and `#strip_summary`, but the UI
+deliberately shows NONE of that anymore: scouting surfaces are raw match-history
+tables only (challenge modal, challenge pages, other fighters' profiles) — the
+player reads patterns themselves. To make that read possible at a glance, every
+history table carries a Moves column of per-round attack+block glyphs for the
+fighter whose history it is: `Fight#scouting_moves_for(fighter)` returns
+key-free `[attack_height, attack_style, block_height]` tuples (EMPTY until
+resolved, so payloads never carry sealed-move vocabulary), rendered by the
+`move_icon`/`move_glyphs` ERB helpers (kept in sync with MoveIcon.svelte) and by
+MoveIcon in the modal. The model's `recent_form`/`#streak` still power the
+profile form strip. The old "Scouting report" tendency panel, the modal tendency
+strip, and the `tendency_meter`/`win_rate_display` helpers are gone.
 
-**Leaderboard** — `GET /leaderboard` (`LeaderboardController`, navbar link) shows
-top-25 all-time XP and most-active-this-week (resolved fights in the last 7 days),
-humans and bots together. Verified fighters only, like the roster.
+**Names ARE belts** — fighters everywhere render as a belt-colored chip whose
+label is the name (`fighter_name_chip` / `fighter_name_link` helpers in ERB,
+name-in-chip + `beltChipStyle` in Svelte). No separate belt columns/chips in
+rosters, feeds, tables, inbox, or the modal.
 
-**Announcer flavor** — `Fight#playback_payload` now carries a deterministic,
-replay-stable announcer `line` per round (`FightAnnouncer`, chosen by fight id +
-round from a small pool — mutual block / thunderous roll / traded / one lands /
-KO), plus a per-side `belt_change` callout (promotion/demotion) derived from the
-snapshot belt + XP + delta. `FightPlayback.svelte` renders both; no animation.
+**Leaderboard** — `GET /leaderboard` shows one board: top-25 all-time XP, humans
+and bots together. (The most-active-this-week board was removed.)
+
+**Match history home** — YOUR paginated history lives on the dojo homepage
+(`DojoController`, `?page=`); your own profile shows none. Other fighters'
+profiles keep theirs (that's the scouting surface).
+
+**Playback** — `FightPlayback.svelte` renders a resolved fight as round panels
+(3-up on desktop, scroll-snap carousel on mobile). Each panel is a 2-column grid
+whose rows PAIR THE EXCHANGE: challenger's attack sits beside the block the
+opponent answered it with, and vice versa below; centered HP after the round
+(before → after in red when hit) closes each column. `MoveIcon.svelte` draws the
+glyphs (stick figure + red strike marker / blue guard bar per height). No damage
+prose; announcer lines exist in the payload but are not rendered. The
+round-by-round reveal happens only the FIRST time a participant views their own
+fight — `fights.challenger_seen_at` / `opponent_seen_at` are stamped by
+`FightsController#claim_first_own_view`; spectators/repeats see everything. The
+fight-settled toast is spoiler-free: "is settled" plus a "Watch the fight" link
+(live.js → Toasts' `link` support), never the result.
+
+**Move picker** — `MoveGrid.svelte` lays the three rounds out HORIZONTALLY
+(columns), heights ordered low/mid/high, each an icon-button (MoveIcon) plus a
+kick/punch toggle. Submit buttons are always labeled (Send challenge / Accept &
+fight) and, while rounds are incomplete, disabled with a tippy.js tooltip (the
+`tooltip` action in `app/javascript/tooltip.js`; retro `.tippy-box` styling in
+sass — tippy's own CSS is not imported).
+
+**Presence** — the Online Now sidebar shows online fighters AND recently offline
+ones (within `Fighter::RECENT_OFFLINE_GRACE`, 5 min past the 2-min online
+window) dimmed but still challengeable — they may have push on. Rows slide in
+via svelte transitions; offline rows age out client-side on the server-supplied
+`offline_expires_in`. A profile's challenge control mirrors the sidebar states
+(open / Challenge sent disabled / Respond).
 
 **Footer** — the retro "visitor counter" is the real all-time resolved-fight
-count (`resolved_fight_tally` helper, `Rails.cache` 5-min, zero-padded), beside
-two pure-CSS 88×31 badges.
+count (`resolved_fight_tally` helper, `Rails.cache` 5-min, zero-padded), above a
+classic under-construction gif (`app/assets/images/under-construction.gif`).
 
 **Fonts** — still the monospace fallback stack; no open pixel display font is
 present on the system or vendored, so the `--kfm-font-display` TODO stands (no

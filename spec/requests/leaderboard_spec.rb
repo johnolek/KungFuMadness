@@ -19,16 +19,10 @@ RSpec.describe "Leaderboard", type: :request do
       expect(response.body.index(leader.name)).to be < response.body.index(rookie.name)
     end
 
-    it "surfaces the most active fighters of the last seven days" do
-      grinder = create(:fighter, name: "Busy Bee")
-      opponent = create(:fighter, name: "Sparring Partner")
-      create(:fight, :resolved, challenger: grinder, opponent: opponent, resolved_at: 1.day.ago)
-      create(:fight, :resolved, challenger: opponent, opponent: grinder, resolved_at: 8.days.ago)
-
+    it "no longer surfaces a most-active board" do
       get leaderboard_path
 
-      expect(response.body).to include("Most active this week")
-      expect(response.body).to include("Busy Bee")
+      expect(response.body).not_to include("Most active this week")
     end
 
     it "requires a verified fighter" do

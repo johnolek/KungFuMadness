@@ -1,25 +1,37 @@
 <script>
-  // Renders a resolved fight clearly and plainly — NO animation. Two belt-colored
-  // rectangles with names, a round-by-round results list revealed one at a time,
-  // and an outcome banner with XP deltas once the fight has played out.
-  let { fight } = $props()
+  // Renders a resolved fight as three scannable round panels — challenger column
+  // on the left, defender on the right — with MoveIcon glyphs for each attack and
+  // block and the fighter's HP after the round (before → after when they took a
+  // hit). No damage prose, no animation. Panels sit side by side on desktop and
+  // become a scroll-snap carousel on small screens.
+  //
+  // `reveal` is true only the first time a participant views their own fight:
+  // rounds then step out one at a time. Spectators and repeat visits see it all.
+  import MoveIcon from "./MoveIcon.svelte"
+  import { beltChipStyle } from "./belt.js"
+
+  let { fight, reveal = false } = $props()
 
   const HEIGHT = { 1: "low", 2: "mid", 3: "high" }
-  const STYLE = { 0: "kicked", 1: "punched" }
+  const STYLE = { 0: "kick", 1: "punch" }
 
-  let revealed = $state(0)
   let total = $derived(fight.rounds.length)
+  // svelte-ignore state_referenced_locally -- islands remount per visit; props seed state once
+  let revealed = $state(reveal ? 0 : fight.rounds.length)
   let done = $derived(revealed >= total)
 
   function beltColor(belt) {
     return `var(--belt-${Math.min(belt, 9)})`
   }
 
-  function attackLine(name, move, damage) {
-    const verb = STYLE[move.attack_style] ?? "struck"
-    const height = HEIGHT[move.attack_height] ?? "?"
-    const outcome = damage > 0 ? `landed for ${damage}` : "blocked"
-    return `${name} ${verb} ${height} — ${outcome}`
+  // Damage this side TOOK in a round (the other side's dealt damage), which also
+  // recovers their pre-round HP from the stored hp_after.
+  function damageTaken(side, round) {
+    return side === "challenger" ? round.opponent_damage : round.challenger_damage
+  }
+
+  function hpAfter(side, round) {
+    return side === "challenger" ? round.challenger_hp_after : round.opponent_hp_after
   }
 
   let bannerText = $derived(
@@ -45,22 +57,63 @@
     {/each}
   </div>
 
-  <ol class="rounds">
+  <div class="rounds">
     {#each fight.rounds as round, i}
       {#if i < revealed}
-        <li class="round">
-          <div class="round__head">Round {round.round}</div>
-          {#if round.announcer}<div class="round__call">{round.announcer}</div>{/if}
-          <div>{attackLine(fight.challenger.name, fight.challenger.moves[i], round.challenger_damage)}</div>
-          <div>{attackLine(fight.opponent.name, fight.opponent.moves[i], round.opponent_damage)}</div>
-          <div class="round__hp">
-            HP after — {fight.challenger.name}: {round.challenger_hp_after},
-            {fight.opponent.name}: {round.opponent_hp_after}
+        {@const cMove = fight.challenger.moves[i]}
+        {@const oMove = fight.opponent.moves[i]}
+        {@const cTaken = damageTaken("challenger", round)}
+        {@const oTaken = damageTaken("opponent", round)}
+        {@const cAfter = hpAfter("challenger", round)}
+        {@const oAfter = hpAfter("opponent", round)}
+        <section class="rp">
+          <header class="rp__head">
+            Round {round.round}
+            {#if fight.ko && i === total - 1}<span class="rp__ko">KO</span>{/if}
+          </header>
+          <!-- Grid rows pair the exchange: the challenger's attack sits beside the
+               block the opponent answered it with, and vice versa below. -->
+          <div class="rp__cols">
+            <div class="rp__name" style={beltChipStyle(fight.challenger.belt)}>{fight.challenger.display_name}</div>
+            <div class="rp__name" style={beltChipStyle(fight.opponent.belt)}>{fight.opponent.display_name}</div>
+
+            <div class="rp__move">
+              <MoveIcon kind="attack" height={cMove.attack_height} style={cMove.attack_style} size={26} />
+              <span>{HEIGHT[cMove.attack_height]} {STYLE[cMove.attack_style]}</span>
+            </div>
+            <div class="rp__move">
+              <MoveIcon kind="block" height={oMove.block_height} size={26} />
+              <span>{HEIGHT[oMove.block_height]} block</span>
+            </div>
+
+            <div class="rp__move">
+              <MoveIcon kind="block" height={cMove.block_height} size={26} />
+              <span>{HEIGHT[cMove.block_height]} block</span>
+            </div>
+            <div class="rp__move">
+              <MoveIcon kind="attack" height={oMove.attack_height} style={oMove.attack_style} size={26} />
+              <span>{HEIGHT[oMove.attack_height]} {STYLE[oMove.attack_style]}</span>
+            </div>
+
+            <div class="rp__hp" class:rp__hp--hit={cTaken > 0}>
+              {#if cTaken > 0}
+                HP {cAfter + cTaken} <span class="rp__arrow">→</span> <strong>{cAfter}</strong>
+              {:else}
+                HP <strong>{cAfter}</strong>
+              {/if}
+            </div>
+            <div class="rp__hp" class:rp__hp--hit={oTaken > 0}>
+              {#if oTaken > 0}
+                HP {oAfter + oTaken} <span class="rp__arrow">→</span> <strong>{oAfter}</strong>
+              {:else}
+                HP <strong>{oAfter}</strong>
+              {/if}
+            </div>
           </div>
-        </li>
+        </section>
       {/if}
     {/each}
-  </ol>
+  </div>
 
   {#if !done}
     <div class="controls">
@@ -115,8 +168,8 @@
   }
 
   .corner__rect {
-    width: 96px;
-    height: 128px;
+    width: 72px;
+    height: 96px;
     margin: 0 auto 0.4rem;
     border: 3px solid var(--kfm-border, #1a1108);
     box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.4);
@@ -134,40 +187,100 @@
   }
 
   .rounds {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.6rem;
+    align-items: start;
   }
 
-  .round {
+  .rp {
     border: 3px solid var(--kfm-border, #1a1108);
     background: var(--kfm-panel, #fbf3dc);
-    padding: 0.6rem 0.8rem;
   }
 
-  .round__head {
+  .rp__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.4rem;
+    padding: 0.25rem 0.5rem;
+    background: var(--kfm-ink, #1a1108);
+    color: var(--kfm-parchment, #f4e4bc);
     font-weight: bold;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    margin-bottom: 0.2rem;
+    font-size: 0.8rem;
   }
 
-  .round__call {
-    font-family: var(--kfm-font-display, "Courier New", monospace);
+  .rp__ko {
+    background: var(--kfm-belt-red, #b83d3d);
+    padding: 0 0.35rem;
+    font-size: 0.7rem;
+  }
+
+  .rp__cols {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    align-items: center;
+    padding: 0.4rem 0;
+  }
+
+  .rp__cols > * {
+    padding: 0.15rem 0.5rem;
+    min-width: 0;
+  }
+
+  .rp__cols > :nth-child(even):not(.rp__name) {
+    border-left: 1px dashed var(--kfm-ink-soft, #4a3a24);
+  }
+
+  .rp__name {
+    margin: 0 0.5rem 0.25rem;
+    padding: 0 0.25rem;
+    border: 1px solid var(--kfm-border, #1a1108);
+    font-size: 0.62rem;
     font-weight: bold;
-    font-style: italic;
-    letter-spacing: 0.02em;
-    margin-bottom: 0.3rem;
-    color: var(--kfm-accent, #b83d3d);
+    text-transform: uppercase;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
-  .round__hp {
-    margin-top: 0.3rem;
-    font-size: 0.9rem;
+  .rp__move {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+  }
+
+  .rp__hp {
+    margin-top: 0.25rem;
+    font-size: 0.8rem;
+    font-variant-numeric: tabular-nums;
     color: var(--kfm-ink-soft, #4a3a24);
+    text-align: center;
+  }
+
+  .rp__hp strong { color: var(--kfm-ink, #1a1108); }
+
+  .rp__hp--hit .rp__arrow,
+  .rp__hp--hit strong { color: var(--kfm-belt-red, #b83d3d); }
+
+  @media (max-width: 700px) {
+    .rounds {
+      display: flex;
+      overflow-x: auto;
+      scroll-snap-type: x mandatory;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .rp {
+      flex: 0 0 85%;
+      scroll-snap-align: start;
+    }
   }
 
   .controls {

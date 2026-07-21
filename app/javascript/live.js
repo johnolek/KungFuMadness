@@ -11,8 +11,8 @@ function dispatch(name, detail) {
   document.dispatchEvent(new CustomEvent(name, { detail }))
 }
 
-function toast(type, message) {
-  dispatch("toast", { type, message })
+function toast(type, message, link) {
+  dispatch("toast", { type, message, link })
 }
 
 // --- modal-open bus ---------------------------------------------------------
@@ -44,12 +44,11 @@ function relayFighterToast(message) {
     const name = fight?.challenger?.display_name ?? "Someone"
     toast("notice", `${name} challenges you!`)
   } else if (message.event === "challenge_resolved") {
+    // No spoilers: the result waits behind the link so the reveal happens on
+    // the fight page, not in a toast.
     const opponent = fight?.opponent?.display_name ?? "your opponent"
-    const outcome =
-      fight?.winner_side === "challenger" ? "you won!"
-      : fight?.winner_side === "opponent" ? "you lost."
-      : "it was a draw."
-    toast(fight?.winner_side === "challenger" ? "notice" : "info", `Your fight with ${opponent} — ${outcome}`)
+    const link = fight?.url ? { href: fight.url, label: "Watch the fight" } : undefined
+    toast("notice", `Your fight with ${opponent} is settled.`, link)
   } else if (message.event === "challenge_declined") {
     const name = fight?.opponent?.display_name ?? "Your opponent"
     toast("info", `${name} declined your challenge.`)

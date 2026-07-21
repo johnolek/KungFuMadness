@@ -51,6 +51,27 @@ RSpec.describe "Fights", type: :request do
       expect(response).to redirect_to(root_path)
     end
 
+    it "steps through the reveal only on a participant's FIRST view of their own fight" do
+      fight = resolved_fight
+      sign_in_as(challenger_user)
+
+      get fight_path(fight)
+      expect(response.body).to include("&quot;reveal&quot;:true")
+
+      get fight_path(fight)
+      expect(response.body).to include("&quot;reveal&quot;:false")
+    end
+
+    it "never hides results from spectators" do
+      fight = resolved_fight
+      sign_in_as(create(:user))
+
+      get fight_path(fight)
+
+      expect(response.body).to include("&quot;reveal&quot;:false")
+      expect(fight.reload.challenger_seen_at).to be_nil
+    end
+
     it "shows a participant a minimal pending state without move data" do
       opponent
       fight = pending_fight

@@ -81,6 +81,17 @@ RSpec.describe "Fighters", type: :request do
       expect(response.body).to include('data-passkey="add-credential"')
     end
 
+    it "shows no match history on your own profile — it lives on the homepage" do
+      create(:fight, :resolved,
+             challenger: user.fighter,
+             opponent: create(:fighter, name: "Moved Away"),
+             resolved_at: 1.hour.ago)
+
+      get fighter_path(user.fighter)
+
+      expect(response.body).not_to include("Match history")
+    end
+
     it "shows no Account panel on someone else's profile" do
       other = create(:fighter, name: "Not You")
 

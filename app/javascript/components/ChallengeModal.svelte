@@ -7,7 +7,11 @@
   // is fetch + CSRF; success closes the modal, toasts, and echoes sidebar/inbox
   // state via more custom events.
   import MoveGrid from "./MoveGrid.svelte"
+  import MoveIcon from "./MoveIcon.svelte"
   import { beltChipStyle } from "./belt.js"
+  import { tooltip } from "../tooltip.js"
+
+  const INCOMPLETE_TIP = "Pick an attack and a block for every round first."
 
   let { csrfToken = "" } = $props()
 
@@ -184,41 +188,33 @@
         <button type="button" class="btn-kfm" onclick={close}>Close</button>
       {:else if data}
         <div class="opp">
-          <span class="chip" style={beltChipStyle(data.opponent.belt)}>{data.opponent.belt_name}</span>
-          <a class="opp__name" href={data.opponent.url}>{data.opponent.display_name}</a>
+          <a class="chip opp__chip" style={beltChipStyle(data.opponent.belt)} href={data.opponent.url}>{data.opponent.display_name}</a>
           <span class="opp__record">Record {data.opponent.record}</span>
         </div>
 
-        {#if data.tendency}
-          <div class="tendency">
-            <div class="tendency__row">
-              <span class="tendency__label">Attacks</span>
-              <span>high {data.tendency.attack.high}% / mid {data.tendency.attack.mid}% / low {data.tendency.attack.low}%</span>
-            </div>
-            <div class="tendency__row">
-              <span class="tendency__label">Blocks</span>
-              <span>high {data.tendency.block.high}% / mid {data.tendency.block.mid}% / low {data.tendency.block.low}%</span>
-            </div>
-            <div class="tendency__row tendency__row--meta">
-              KO rate {data.tendency.ko_rate}% · {data.tendency.fights} resolved
-            </div>
-          </div>
-        {/if}
-
         <details class="scout">
-          <summary>Scouting — last {data.scouting.length} fights</summary>
+          <summary>Match history — last {data.scouting.length} fights</summary>
           {#if data.scouting.length === 0}
             <p class="scout__empty">No resolved fights on record. You're stepping into the unknown.</p>
           {:else}
             <div class="table-scroll">
             <table class="stat-table scout__table">
-              <thead><tr><th>Date</th><th>Vs</th><th>Belt</th><th>Result</th><th></th></tr></thead>
+              <thead><tr><th>Date</th><th>Vs</th><th>Moves</th><th>Result</th><th></th></tr></thead>
               <tbody>
                 {#each data.scouting as row (row.id)}
                   <tr>
                     <td>{row.date}</td>
-                    <td>{row.opponent_name}</td>
-                    <td><span class="chip" style={beltChipStyle(row.opponent_belt)}>{row.opponent_belt}</span></td>
+                    <td><span class="chip" style={beltChipStyle(row.opponent_belt)}>{row.opponent_name}</span></td>
+                    <td>
+                      <span class="moves">
+                        {#each row.moves as [attackHeight, attackStyle, blockHeight], i (i)}
+                          <span class="moves__round">
+                            <MoveIcon kind="attack" height={attackHeight} style={attackStyle} size={16} />
+                            <MoveIcon kind="block" height={blockHeight} size={16} />
+                          </span>
+                        {/each}
+                      </span>
+                    </td>
                     <td class="res res--{row.result}">{RESULT_LABEL[row.result]}{row.ko ? " (KO)" : ""}</td>
                     <td><a href={row.url}>Watch</a></td>
                   </tr>
@@ -229,20 +225,23 @@
           {/if}
         </details>
 
-        <p class="modal__hint">Commit all three rounds — your opponent answers blind.</p>
         <MoveGrid onchange={onGrid} />
 
         {#if error}<p class="modal__error">{error}</p>{/if}
 
         <div class="modal__actions">
           {#if mode === "challenge"}
-            <button type="button" class="btn-kfm btn-kfm--go" disabled={!complete || submitting} onclick={send}>
-              {submitting ? "Sending…" : complete ? "Send challenge" : "Choose every round"}
-            </button>
+            <span use:tooltip={{ content: INCOMPLETE_TIP, enabled: !complete }}>
+              <button type="button" class="btn-kfm btn-kfm--go" disabled={!complete || submitting} onclick={send}>
+                {submitting ? "Sending…" : "Send challenge"}
+              </button>
+            </span>
           {:else}
-            <button type="button" class="btn-kfm btn-kfm--go" disabled={!complete || submitting} onclick={accept}>
-              {submitting ? "Working…" : complete ? "Accept & fight" : "Choose every round"}
-            </button>
+            <span use:tooltip={{ content: INCOMPLETE_TIP, enabled: !complete }}>
+              <button type="button" class="btn-kfm btn-kfm--go" disabled={!complete || submitting} onclick={accept}>
+                {submitting ? "Working…" : "Accept & fight"}
+              </button>
+            </span>
             <button type="button" class="btn-kfm btn-kfm--decline" disabled={submitting} onclick={decline}>Decline</button>
           {/if}
           <button type="button" class="btn-kfm" disabled={submitting} onclick={close}>Cancel</button>
@@ -266,7 +265,7 @@
   }
 
   .modal {
-    width: min(560px, 100%);
+    width: min(640px, 100%);
     margin: 0;
     max-height: calc(100vh - 4rem);
     overflow-y: auto;
@@ -295,7 +294,6 @@
     flex-wrap: wrap;
     margin-bottom: 0.5rem;
   }
-  .opp__name { font-weight: bold; }
   .opp__record { color: var(--kfm-ink-soft); font-size: 0.85rem; }
 
   .chip {
@@ -308,25 +306,27 @@
     vertical-align: middle;
   }
 
-  .tendency {
-    border: 2px solid var(--kfm-border);
-    background: rgba(0, 0, 0, 0.03);
-    padding: 0.4rem 0.6rem;
-    margin: 0.4rem 0 0.6rem;
-    font-size: 0.8rem;
+  .opp__chip {
+    font-size: 0.9rem;
+    text-decoration: none;
   }
-  .tendency__row { display: flex; gap: 0.5rem; }
-  .tendency__label {
-    font-weight: bold;
-    text-transform: uppercase;
-    font-size: 0.7rem;
-    letter-spacing: 0.04em;
-    min-width: 3.8rem;
-    color: var(--kfm-ink-soft);
-  }
-  .tendency__row--meta { color: var(--kfm-ink-soft); margin-top: 0.15rem; }
 
   .scout { margin: 0.5rem 0 0.75rem; }
+
+  .moves {
+    display: inline-flex;
+    gap: 0.4rem;
+    align-items: center;
+  }
+
+  .moves__round {
+    display: inline-flex;
+    gap: 1px;
+    align-items: center;
+    padding: 0 0.15rem;
+    border-right: 1px dashed var(--kfm-ink-soft);
+  }
+  .moves__round:last-child { border-right: none; }
   .scout summary { cursor: pointer; font-weight: bold; text-transform: uppercase; font-size: 0.8rem; }
   .scout__empty { font-size: 0.85rem; color: var(--kfm-ink-soft); }
   .scout__table { margin-top: 0.5rem; font-size: 0.8rem; }
@@ -335,7 +335,6 @@
   .res--loss { color: var(--kfm-belt-red); font-weight: bold; }
   .res--draw { color: var(--kfm-ink-soft); font-weight: bold; }
 
-  .modal__hint { font-size: 0.85rem; margin: 0.5rem 0; }
   .modal__error { color: var(--kfm-belt-red); font-weight: bold; }
 
   .modal__actions {

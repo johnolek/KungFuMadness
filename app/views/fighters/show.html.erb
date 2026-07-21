@@ -29,39 +29,49 @@
       <% end %>
 
       <% if current_fighter && current_fighter != @fighter %>
+        <% state, respond_fight_id = @challenge_state %>
         <p class="stat-line">
-          <%= link_to "Challenge #{@fighter.name}", new_challenge_path(opponent: @fighter.id),
-                class: "btn-kfm", data: { challenge_open: @fighter.id } %>
+          <% if state == :respond %>
+            <%= link_to "Respond to #{@fighter.name}", challenge_path(respond_fight_id),
+                  class: "btn-kfm", data: { respond_open: respond_fight_id } %>
+          <% elsif state == :challenged %>
+            <span class="btn-kfm is-disabled" title="Waiting on their answer">Challenge sent</span>
+          <% else %>
+            <%= link_to "Challenge #{@fighter.name}", new_challenge_path(opponent: @fighter.id),
+                  class: "btn-kfm", data: { challenge_open: @fighter.id } %>
+          <% end %>
         </p>
       <% end %>
     </div>
   </div>
 </div>
 
-<%= render "fighters/tendencies", scouting: @scouting %>
+<% if @own_profile %>
+  <%# Your own match history lives on the dojo homepage, not here. %>
+<% else %>
+  <div class="panel-kfm">
+    <div class="panel-kfm-title">Match history</div>
+    <% if @history.any? %>
+      <%= render "fights/history_table", fighter: @fighter, fights: @history, show_xp: true %>
 
-<div class="panel-kfm">
-  <div class="panel-kfm-title">Match history</div>
-  <% if @history.any? %>
-    <%= render "fights/history_table", fighter: @fighter, fights: @history, show_xp: true %>
-
-    <div class="page-nav">
-      <% if @page > 1 %>
-        <%= link_to "← Newer", fighter_path(@fighter, page: @page - 1), class: "btn-kfm" %>
-      <% else %>
-        <span class="btn-kfm is-disabled">← Newer</span>
-      <% end %>
-      <span class="page-nav__label">Page <%= @page %> of <%= @total_pages %></span>
-      <% if @page < @total_pages %>
-        <%= link_to "Older →", fighter_path(@fighter, page: @page + 1), class: "btn-kfm" %>
-      <% else %>
-        <span class="btn-kfm is-disabled">Older →</span>
-      <% end %>
-    </div>
-  <% else %>
-    <p>No fights on record yet.</p>
-  <% end %>
-</div>
+      <div class="page-nav">
+        <% if @page > 1 %>
+          <%= link_to "← Newer", fighter_path(@fighter, page: @page - 1), class: "btn-kfm" %>
+        <% else %>
+          <span class="btn-kfm is-disabled">← Newer</span>
+        <% end %>
+        <span class="page-nav__label">Page <%= @page %> of <%= @total_pages %></span>
+        <% if @page < @total_pages %>
+          <%= link_to "Older →", fighter_path(@fighter, page: @page + 1), class: "btn-kfm" %>
+        <% else %>
+          <span class="btn-kfm is-disabled">Older →</span>
+        <% end %>
+      </div>
+    <% else %>
+      <p>No fights on record yet.</p>
+    <% end %>
+  </div>
+<% end %>
 
 <% if @own_profile %>
   <div class="panel-kfm">

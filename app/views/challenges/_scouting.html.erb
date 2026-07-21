@@ -1,17 +1,9 @@
-<%# Compact pre-commit scouting panel. Locals: scout (the fighter being sized up),
-    recent_fights (their most recent resolved fights). Read their patterns here,
-    then open individual fights or their full profile before committing. %>
+<%# Pre-commit scouting panel: raw match history ONLY — no tendency digests.
+    Locals: scout (the fighter being sized up), recent_fights (their most recent
+    resolved fights). Reading patterns out of these is the player's job. %>
 <div class="panel-kfm">
   <div class="panel-kfm-title">Scouting: <%= fighter_display_name(scout) %></div>
   <% if recent_fights.any? %>
-    <% strip = Scouting.new(fighter: scout).strip_summary %>
-    <% if strip %>
-      <p class="stat-line tendency-note">
-        Attacks: high <%= strip[:attack][:high] %>% / mid <%= strip[:attack][:mid] %>% / low <%= strip[:attack][:low] %>%
-        &middot; Blocks: high <%= strip[:block][:high] %>% / mid <%= strip[:block][:mid] %>% / low <%= strip[:block][:low] %>%
-        &middot; KO rate <%= strip[:ko_rate] %>%
-      </p>
-    <% end %>
     <%= render "fights/history_table", fighter: scout, fights: recent_fights %>
     <p class="stat-line"><%= link_to "Full history →", fighter_path(scout) %></p>
   <% else %>

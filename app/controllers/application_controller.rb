@@ -31,24 +31,40 @@ class ApplicationController < ActionController::Base
     @sidebar_online = build_online_sidebar(current_fighter)
   end
 
-  # One row per online fighter (excluding yourself), each tagged with your standing
-  # challenge state toward them: "respond" when they have a pending challenge
-  # waiting on you (carrying its id), "challenged" when you already have a pending
-  # one out to them, or "open" when the mat is clear.
+  # One row per online-or-recently-offline fighter — including yourself, slotted
+  # into rank order so you can see at a glance how you stack up and who fights
+  # near your level. Recently offline fighters (inside RECENT_OFFLINE_GRACE) ride
+  # along dimmed but still challengeable, with the seconds until they age out so
+  # the client can drop them on time. Each other fighter is tagged with your
+  # standing challenge state toward them: "respond" when they have a pending
+  # challenge waiting on you (carrying its id), "challenged" when you already
+  # have a pending one out to them, or "open" when the mat is clear. Your own
+  # row is tagged "you".
   #
   # @param viewer [Fighter]
   # @return [Array<Hash>]
   def build_online_sidebar(viewer)
-    online = Fighter.online.where.not(id: viewer.id).ranked.limit(SIDEBAR_ONLINE_LIMIT)
+    seen_window = Fighter::ONLINE_WINDOW + Fighter::RECENT_OFFLINE_GRACE
+    roster = Fighter.online(within: seen_window).ranked.limit(SIDEBAR_ONLINE_LIMIT).to_a
+    roster = ([ viewer ] + roster).uniq.sort_by { |f| [ -f.belt, -f.xp, f.name ] }
     outbound = Fight.pending.where(challenger: viewer).pluck(:opponent_id).to_set
     inbound = Fight.pending.where(opponent: viewer).pluck(:challenger_id, :id).to_h
+    now = Time.current
 
-    online.map do |fighter|
-      state = if inbound.key?(fighter.id) then "respond"
+    roster.map do |fighter|
+      state = if fighter.id == viewer.id then "you"
+      elsif inbound.key?(fighter.id) then "respond"
       elsif outbound.include?(fighter.id) then "challenged"
       else "open"
       end
-      fighter.presence_payload.merge(challenge_state: state, fight_id: inbound[fighter.id])
+      online = fighter.id == viewer.id || fighter.online?
+      row = fighter.presence_payload.merge(
+        challenge_state: state, fight_id: inbound[fighter.id], online: online
+      )
+      unless online
+        row[:offline_expires_in] = ((fighter.last_seen_at + seen_window) - now).to_i
+      end
+      row
     end
   end
 

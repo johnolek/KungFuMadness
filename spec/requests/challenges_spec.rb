@@ -110,6 +110,21 @@ RSpec.describe "Challenges", type: :request do
       expect(response.body).not_to include("declines")
       expect(response.body).not_to include("\"7\"")
     end
+
+    it "carries the opponent's resolved moves as key-free tuples for the pattern read" do
+      prey = create(:fighter, name: "Pattern Prey", belt: 2)
+      fight = create(:fight, :resolved, challenger: opponent, opponent: prey, resolved_at: 1.hour.ago)
+      (1..3).each do |round|
+        fight.fight_moves.create!(fighter: opponent, round: round, attack_height: 3, attack_style: 1, block_height: 1)
+      end
+
+      get new_challenge_path(opponent: opponent.id, format: :json)
+
+      moves = JSON.parse(response.body)["scouting"].first["moves"]
+      expect(moves).to eq([ [ 3, 1, 1 ], [ 3, 1, 1 ], [ 3, 1, 1 ] ])
+      expect(response.body).not_to include("attack_height")
+      expect(response.body).not_to include("block_height")
+    end
   end
 
   describe "GET /challenges/:id.json (respond modal payload) sealed-moves secrecy" do

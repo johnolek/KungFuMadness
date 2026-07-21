@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_19_030000) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_20_224550) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -89,6 +89,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_19_030000) do
   create_table "fights", force: :cascade do |t|
     t.integer "challenger_belt", null: false
     t.bigint "challenger_id", null: false
+    t.datetime "challenger_seen_at"
     t.integer "challenger_xp", null: false
     t.integer "challenger_xp_delta"
     t.datetime "created_at", null: false
@@ -96,6 +97,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_19_030000) do
     t.boolean "ko", default: false, null: false
     t.integer "opponent_belt", null: false
     t.bigint "opponent_id", null: false
+    t.datetime "opponent_seen_at"
     t.integer "opponent_xp", null: false
     t.integer "opponent_xp_delta"
     t.datetime "resolved_at"

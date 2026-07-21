@@ -86,7 +86,12 @@
       use:autodismiss={toast.id}
     >
       <button class="toast-close" aria-label="Dismiss notification" onclick={() => dismiss(toast.id)}>×</button>
-      <span class="toast-message">{toast.message}</span>
+      <span class="toast-message">
+        {toast.message}
+        {#if toast.link}
+          <a class="toast-link" href={toast.link.href}>{toast.link.label}</a>
+        {/if}
+      </span>
     </div>
   {/each}
 </div>
@@ -129,6 +134,16 @@
   .toast-message {
     flex: 1;
     line-height: 1.3;
+  }
+
+  .toast-link {
+    display: block;
+    margin-top: 0.2rem;
+    color: inherit;
+    text-decoration: underline;
+    text-transform: uppercase;
+    font-size: 0.8em;
+    letter-spacing: 0.04em;
   }
 
   .toast-close {

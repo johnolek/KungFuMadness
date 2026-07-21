@@ -4,6 +4,9 @@
   // (opponent id, CSRF token). The move-picking UI is the shared MoveGrid; this
   // wrapper only handles form submission for the /challenges/new and respond pages.
   import MoveGrid from "./MoveGrid.svelte"
+  import { tooltip } from "../tooltip.js"
+
+  const INCOMPLETE_TIP = "Pick an attack and a block for every round first."
 
   let {
     action,
@@ -36,9 +39,9 @@
 
   <MoveGrid {onchange} />
 
-  <button type="submit" class="commit-btn" disabled={!complete}>
-    {complete ? submitLabel : "Choose every round first"}
-  </button>
+  <span class="commit-wrap" use:tooltip={{ content: INCOMPLETE_TIP, enabled: !complete }}>
+    <button type="submit" class="commit-btn" disabled={!complete}>{submitLabel}</button>
+  </span>
 </form>
 
 <style>
@@ -46,6 +49,10 @@
     display: flex;
     flex-direction: column;
     gap: 1rem;
+  }
+
+  .commit-wrap {
+    align-self: flex-start;
   }
 
   .commit-btn {

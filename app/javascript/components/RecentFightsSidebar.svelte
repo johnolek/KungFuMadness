@@ -1,7 +1,8 @@
 <script>
-  // Left sidebar: recent resolved fights at a glance. Winner bold with belt chip,
-  // loser dimmed, KO/draw badges, relative time, whole row links to playback.
-  // Live: DojoChannel `fight_resolved` events (relayed as `kfm:dojo`) prepend.
+  // Left sidebar: recent resolved fights, ONE line per fight — winner's name as a
+  // belt-colored chip, loser dimmed, KO marker, relative time. The whole row
+  // links to playback. Live: DojoChannel `fight_resolved` events (relayed as
+  // `kfm:dojo`) prepend; belt_change events add promotion/demotion lines.
   import { beltChipStyle, relativeTime } from "./belt.js"
 
   let { fights: initial = [] } = $props()
@@ -57,40 +58,40 @@
         {#if fight.kind === "belt_change"}
           <li class="feed__row feed__row--belt feed__row--{fight.direction}">
             <a class="feed__link" href={fight.fighter.url}>
-              <span class="feed__belt">
-                <span class="chip" style={beltChipStyle(fight.fighter.belt)}>{fight.fighter.belt_name}</span>
-                <strong>{fight.fighter.display_name}</strong>
-                {#if fight.direction === "promotion"}
-                  reached {fight.fighter.belt_name} belt
-                {:else}
-                  fell to {fight.fighter.belt_name} belt
-                {/if}
+              <span class="feed__line">
+                <span class="chip" style={beltChipStyle(fight.fighter.belt)}>{fight.fighter.display_name}</span>
+                <span class="feed__vs">{fight.direction === "promotion" ? "rose to" : "fell to"} {fight.fighter.belt_name}</span>
               </span>
             </a>
           </li>
         {:else}
-        {@const s = sides(fight)}
-        <li class="feed__row" class:feed__row--draw={s === null}>
-          <a class="feed__link" href={fight.url}>
-            {#if s}
-              <span class="feed__winner">
-                <span class="chip" style={beltChipStyle(s.winner.belt)}>{s.winner.belt_name}</span>
-                <strong>{s.winner.display_name}</strong>
-              </span>
-              <span class="feed__vs">beat</span>
-              <span class="feed__loser">{s.loser.display_name}</span>
-            {:else}
-              <span class="feed__winner"><strong>{fight.challenger.display_name}</strong></span>
-              <span class="feed__vs">drew</span>
-              <span class="feed__loser">{fight.opponent.display_name}</span>
-            {/if}
-            <span class="feed__meta">
-              {#if fight.ko}<span class="badge badge--ko">KO</span>{/if}
-              {#if s === null}<span class="badge badge--draw">draw</span>{/if}
-              <span class="feed__time">{(now, relativeTime(fight.resolved_at))}</span>
-            </span>
-          </a>
-        </li>
+          {@const s = sides(fight)}
+          <li class="feed__row" class:feed__row--draw={s === null}>
+            <a class="feed__link" href={fight.url}>
+              {#if s}
+                <span class="feed__line feed__line--winner">
+                  <span class="chip" style={beltChipStyle(s.winner.belt)}>{s.winner.display_name}</span>
+                  {#if fight.ko}<span class="badge badge--ko">KO</span>{/if}
+                </span>
+                <span class="feed__line feed__line--loser">
+                  <span class="feed__vs">beat</span>
+                  <span class="feed__loser">{s.loser.display_name}</span>
+                  <span class="feed__time">{(now, relativeTime(fight.resolved_at))}</span>
+                </span>
+              {:else}
+                <span class="feed__line feed__line--winner">
+                  <span class="chip chip--draw" style={beltChipStyle(fight.challenger.belt)}>{fight.challenger.display_name}</span>
+                  <span class="badge badge--draw">Draw</span>
+                  {#if fight.ko}<span class="badge badge--ko">KO</span>{/if}
+                </span>
+                <span class="feed__line feed__line--loser">
+                  <span class="feed__vs">drew</span>
+                  <span class="feed__loser">{fight.opponent.display_name}</span>
+                  <span class="feed__time">{(now, relativeTime(fight.resolved_at))}</span>
+                </span>
+              {/if}
+            </a>
+          </li>
         {/if}
       {/each}
     </ul>
@@ -110,63 +111,77 @@
   .feed__row:last-child { border-bottom: none; }
 
   .feed__link {
-    display: block;
-    padding: 0.4rem 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+    padding: 0.3rem 0;
     text-decoration: none;
     color: var(--kfm-ink);
-    font-size: 0.85rem;
-    line-height: 1.35;
+    font-size: 0.78rem;
+    line-height: 1.3;
   }
-  .feed__link:hover { color: var(--kfm-ink); background: rgba(0, 0, 0, 0.04); }
+  .feed__link:hover { background: rgba(0, 0, 0, 0.04); }
 
-  .feed__winner .chip {
+  .feed__line {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    min-width: 0;
+    white-space: nowrap;
+  }
+
+  .feed__line--loser { padding-left: 0.2rem; }
+
+  .chip {
     display: inline-block;
     padding: 0 0.3rem;
     border: 1px solid var(--kfm-border);
-    font-size: 0.65rem;
+    font-size: 0.7rem;
     font-weight: bold;
     text-transform: uppercase;
-    vertical-align: middle;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex: 0 1 auto;
+    min-width: 0;
   }
+
+  .chip--draw { opacity: 0.75; }
 
   .feed__vs {
     color: var(--kfm-ink-soft);
     font-style: italic;
-    margin: 0 0.15rem;
+    flex: none;
   }
 
-  .feed__loser { color: var(--kfm-ink-soft); }
-  .feed__row--draw .feed__winner strong,
-  .feed__row--draw .feed__loser { color: var(--kfm-ink-soft); font-weight: bold; }
-
-  .feed__meta { display: block; margin-top: 0.1rem; }
+  .feed__loser {
+    color: var(--kfm-ink-soft);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex: 0 1 auto;
+    min-width: 0;
+  }
 
   .badge {
+    flex: none;
     display: inline-block;
-    padding: 0 0.3rem;
-    font-size: 0.6rem;
+    padding: 0 0.25rem;
+    font-size: 0.58rem;
     font-weight: bold;
     text-transform: uppercase;
     border: 1px solid var(--kfm-border);
-    margin-right: 0.3rem;
   }
   .badge--ko { background: var(--kfm-belt-red); color: var(--kfm-parchment); }
   .badge--draw { background: var(--kfm-tatami); color: var(--kfm-ink); }
 
-  .feed__time { color: var(--kfm-ink-soft); font-size: 0.7rem; }
+  .feed__time {
+    color: var(--kfm-ink-soft);
+    font-size: 0.65rem;
+    margin-left: auto;
+    flex: none;
+  }
 
   .feed__row--belt { border-left: 3px solid var(--kfm-belt-yellow); }
-  .feed__row--belt .feed__link { padding-left: 0.4rem; font-style: italic; }
+  .feed__row--belt .feed__link { padding-left: 0.3rem; font-style: italic; }
   .feed__row--promotion { border-left-color: var(--kfm-belt-green); }
   .feed__row--demotion { border-left-color: var(--kfm-belt-red); }
-  .feed__belt .chip {
-    display: inline-block;
-    padding: 0 0.3rem;
-    border: 1px solid var(--kfm-border);
-    font-size: 0.65rem;
-    font-weight: bold;
-    text-transform: uppercase;
-    vertical-align: middle;
-    margin-right: 0.2rem;
-  }
 </style>

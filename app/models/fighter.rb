@@ -16,6 +16,11 @@ class Fighter < ApplicationRecord
   # window; it's the single source of truth for presence.
   ONLINE_WINDOW = 2.minutes
 
+  # How long past the online window a fighter still lingers in the sidebar as
+  # "recently offline" — dimmed but challengeable, in case they have push
+  # notifications on.
+  RECENT_OFFLINE_GRACE = 5.minutes
+
   scope :bots, -> { where(bot: true) }
   scope :humans, -> { where(bot: false) }
   scope :online, ->(within: ONLINE_WINDOW) { where(last_seen_at: within.ago..) }

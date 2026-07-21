@@ -1,13 +1,15 @@
 <%# Resolved-fight table from +fighter+'s perspective — the scouting surface shared
-    by profiles and challenge pages. Locals: fighter (whose history this is), fights
-    (resolved Fight records, newest first), show_xp (adds the XP-delta column). %>
+    by the dojo, profiles, and challenge pages. Locals: fighter (whose history this
+    is), fights (resolved Fight records, newest first, with fight_moves preloaded),
+    show_xp (adds the XP-delta column). Opponent names render as belt-colored chips
+    (snapshot belt); the Moves column shows +fighter+'s own committed rounds. %>
 <div class="table-scroll">
 <table class="stat-table">
   <thead>
     <tr>
       <th>Date</th>
       <th>Opponent</th>
-      <th>Their belt</th>
+      <th>Moves</th>
       <th>Result</th>
       <% if local_assigns[:show_xp] %><th>XP</th><% end %>
       <th></th>
@@ -21,8 +23,8 @@
       <% my_delta = as_challenger ? fight.challenger_xp_delta : fight.opponent_xp_delta %>
       <tr>
         <td><%= fight.resolved_at.strftime("%Y-%m-%d") %></td>
-        <td><%= link_to fighter_display_name(other), fighter_path(other) %></td>
-        <td><%= belt_chip(other_belt) %></td>
+        <td><%= fighter_name_link(other, belt: other_belt) %></td>
+        <td class="moves-cell"><%= move_glyphs(fight.scouting_moves_for(fighter)) %></td>
         <td>
           <% if fight.winner_id.nil? %>
             <span class="result-draw">Draw<%= " (KO)" if fight.ko %></span>

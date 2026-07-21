@@ -5,15 +5,12 @@
   <div class="table-scroll">
   <table class="stat-table">
     <thead>
-      <tr><th>Fighter</th><th>Belt</th><th>XP</th><th>Record (W-L-D)</th><th></th></tr>
+      <tr><th>Fighter</th><th>XP</th><th>Record (W-L-D)</th><th></th></tr>
     </thead>
     <tbody>
       <% @fighters.each do |fighter| %>
         <tr>
-          <td>
-            <%= link_to fighter_display_name(fighter), fighter_path(fighter) %>
-          </td>
-          <td><%= belt_chip(fighter.belt) %></td>
+          <td><%= fighter_name_link(fighter) %></td>
           <td><%= fighter.xp %></td>
           <td><%= fighter.record %></td>
           <td>

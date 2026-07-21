@@ -317,6 +317,33 @@ a {
   font-weight: bold;
   font-size: 0.85rem;
   text-transform: uppercase;
+
+  // The [BOT] tag inherits the chip's contrast color instead of the soft ink,
+  // which is unreadable on dark belt fills.
+  .bot-tag {
+    color: inherit;
+    opacity: 0.75;
+  }
+}
+
+// A linked name-as-belt chip: the chip is the affordance, no underline needed.
+.belt-link {
+  text-decoration: none;
+}
+
+// -- Tooltips (tippy.js, unthemed core — we own the whole look) ---------------
+
+.tippy-box {
+  background: var(--kfm-ink);
+  color: var(--kfm-parchment);
+  border: 2px solid var(--kfm-border);
+  box-shadow: 3px 3px 0 var(--kfm-shadow);
+  font-family: var(--kfm-font-display);
+  font-size: 0.72rem;
+  font-weight: bold;
+  letter-spacing: 0.03em;
+  padding: 0.3rem 0.5rem;
+  max-width: 16rem;
 }
 
 // -- Belt rectangle (the fighter's avatar — a belt-colored block) -------------
@@ -350,6 +377,22 @@ a {
 
 .stat-line {
   margin: 0.2rem 0;
+}
+
+// Per-round attack+block glyph pairs in a history table's Moves column.
+.moves-cell {
+  white-space: nowrap;
+}
+
+.move-round {
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+  padding: 0 0.25rem;
+  border-right: 1px dashed var(--kfm-ink-soft);
+
+  &:last-child { border-right: none; }
+  svg { vertical-align: middle; }
 }
 
 .result-win { color: var(--kfm-belt-green); font-weight: bold; }
@@ -412,52 +455,6 @@ a {
   }
 }
 
-// -- Scouting tendency tables ------------------------------------------------
-
-.tendency-note { color: var(--kfm-ink-soft); margin-bottom: 0.75rem; }
-
-.tendency-h {
-  margin: 1rem 0 0.4rem;
-  font-family: var(--kfm-font-display);
-  font-size: 0.9rem;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--kfm-ink);
-}
-
-.tendency-table {
-  td { vertical-align: middle; }
-
-  .tendency-split { font-weight: bold; white-space: nowrap; }
-}
-
-// A static horizontal bar meter (no animation): a filled track behind the label.
-.meter {
-  position: relative;
-  min-width: 3.5rem;
-  height: 1.15rem;
-  background: rgba(0, 0, 0, 0.06);
-  border: 1px solid var(--kfm-ink-soft);
-}
-
-.meter__fill {
-  position: absolute;
-  inset: 0 auto 0 0;
-  height: 100%;
-  background: var(--kfm-belt-green);
-  opacity: 0.7;
-}
-
-.meter__label {
-  position: relative;
-  display: block;
-  text-align: center;
-  font-size: 0.72rem;
-  font-weight: bold;
-  line-height: 1.15rem;
-  color: var(--kfm-ink);
-}
-
 // -- Recent-form strip -------------------------------------------------------
 
 .form-strip {
@@ -517,48 +514,13 @@ a {
   white-space: nowrap;
 }
 
-.leaderboard-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1.5rem;
-  align-items: start;
+// -- Footer ------------------------------------------------------------------
+
+.kfm-footer__construction {
+  margin: 0.6rem 0 0;
+
+  img { max-width: 100%; image-rendering: pixelated; }
 }
-
-@media (max-width: 800px) {
-  .leaderboard-grid { grid-template-columns: 1fr; }
-}
-
-// -- Footer badges -----------------------------------------------------------
-
-.kfm-footer__badges {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  justify-content: center;
-  margin-top: 0.6rem;
-}
-
-// A classic 88x31 web-1.0 button, pure CSS/text — no image.
-.badge-88 {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 88px;
-  height: 31px;
-  padding: 0 4px;
-  border: 2px outset var(--kfm-tatami);
-  background: var(--kfm-ink);
-  color: var(--kfm-belt-yellow);
-  font-family: var(--kfm-font-display);
-  font-size: 0.55rem;
-  font-weight: bold;
-  line-height: 1.05;
-  text-align: center;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-}
-
-.badge-88--alt { background: var(--kfm-belt-red); color: var(--kfm-parchment); }
 
 .kfm-footer__count { font-variant-numeric: tabular-nums; }
 
